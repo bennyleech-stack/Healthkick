@@ -62,6 +62,12 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .session-card.lower-a::before{background:linear-gradient(90deg,var(--green),var(--blue))}
 .session-card.upper-b::before{background:linear-gradient(90deg,var(--purple),var(--gold))}
 .session-card.lower-b::before{background:linear-gradient(90deg,var(--orange),var(--green))}
+.session-card.push-a::before{background:linear-gradient(90deg,var(--gold),var(--accent))}
+.session-card.pull-a::before{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.session-card.legs-a::before{background:linear-gradient(90deg,var(--green),var(--blue))}
+.session-card.push-b::before{background:linear-gradient(90deg,var(--purple),var(--gold))}
+.session-card.pull-b::before{background:linear-gradient(90deg,var(--orange),var(--purple))}
+.session-card.legs-b::before{background:linear-gradient(90deg,var(--orange),var(--green))}
 .session-card.rest::before{background:var(--border2)}
 .session-hdr{padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:flex-start}
 .session-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text)}
@@ -229,6 +235,8 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 
     <!-- PROGRESS PANE -->
     <div id="pane-progress" style="display:none">
+      <div class="sec">Last 7 days by muscle</div>
+      <div id="tally-card" style="margin:0 16px 4px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs)"></div>
       <div class="sec">24-Week Journey</div>
       <div class="milestone-track">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
@@ -310,6 +318,7 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
       <div class="sh-stat"><div class="sh-val" id="sum-vol" style="color:var(--blue)">0</div><div class="sh-lbl">Volume kg</div></div>
       <div class="sh-stat"><div class="sh-val" id="sum-dur" style="color:var(--gold)">0</div><div class="sh-lbl">Minutes</div></div>
     </div>
+    <div id="sum-coverage" style="margin-bottom:12px"></div>
     <div id="prog-note" class="prog-note" style="display:none"></div>
     <div id="sum-progressions" style="margin-bottom:12px"></div>
     <button onclick="closeSummary()" style="width:100%;padding:14px;border-radius:var(--rs);background:linear-gradient(135deg,var(--gold),var(--accent));color:#0a0f07;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Done</button>
@@ -370,25 +379,40 @@ const END_DATE   = '2026-12-19'; // 40th birthday
 const DELOAD_WEEKS = [7, 14, 21];
 
 const SESSIONS = {
-  'Upper A': {
+  'Push A': {
     day: 'Monday',
     bias: 'Strength',
-    color: 'upper-a',
+    color: 'push-a',
     warmup: ['3 min bike or row', 'Band pull-aparts × 15', 'Wrist extensor/flexor stretch 30s each'],
     exercises: [
-      {name:'DB Bench Press', sets:4, repLow:5, repHigh:8, rir:2, rest:'2–3 min', inc:2.5, note:'', prehab:false},
-      {name:'Chest-Supported Row', sets:4, repLow:6, repHigh:10, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
+      {name:'Barbell Bench Press', sets:4, repLow:5, repHigh:8, rir:2, rest:'2–3 min', inc:2.5, note:'On the avoid-list from your elbow history — proceed knowingly', prehab:false},
+      {name:'Incline DB Press', sets:3, repLow:8, repHigh:12, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
+      {name:'Pec Deck', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
       {name:'Seated DB Shoulder Press', sets:3, repLow:8, repHigh:10, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
-      {name:'Lat Pulldown (neutral grip)', sets:3, repLow:8, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
+      {name:'Cable Lateral Raise', sets:3, repLow:12, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
       {name:'Cable Rope Pushdown', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'Elbow-friendly', prehab:false},
-      {name:'Incline DB Curl', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'Or cable', prehab:false},
+      {name:'Overhead Rope Extension', sets:2, repLow:15, repHigh:20, rir:2, rest:'60 s', inc:2.5, note:'SKIP if elbow flares', prehab:false},
       {name:'Wrist Extensor Eccentrics', sets:2, repLow:15, repHigh:15, rir:0, rest:'—', inc:0, note:'Elbow rehab — always do this', prehab:true},
     ]
   },
-  'Lower A': {
+  'Pull A': {
     day: 'Tuesday',
     bias: 'Strength',
-    color: 'lower-a',
+    color: 'pull-a',
+    warmup: ['3 min bike or row', 'Band pull-aparts × 15', 'Dead hang or lat activation 2×20s'],
+    exercises: [
+      {name:'Barbell Row', sets:5, repLow:6, repHigh:10, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
+      {name:'Lat Pulldown (neutral grip)', sets:3, repLow:8, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
+      {name:'Seated Cable Row', sets:3, repLow:8, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
+      {name:'Face Pull', sets:3, repLow:15, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'Elbow rehab — always do this', prehab:false},
+      {name:'Incline DB Curl', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'Or cable', prehab:false},
+      {name:'Hammer Curl', sets:3, repLow:10, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+    ]
+  },
+  'Legs A': {
+    day: 'Wednesday',
+    bias: 'Strength',
+    color: 'legs-a',
     warmup: ['Knee-to-wall × 10/side', 'Calf stretch 45s/side (straight + bent knee)', 'Session ramp-up sets'],
     exercises: [
       {name:'Back Squat', sets:4, repLow:5, repHigh:8, rir:2, rest:'3 min', inc:5, note:'Rack + safety pins. Heel wedges if needed.', prehab:false},
@@ -396,36 +420,48 @@ const SESSIONS = {
       {name:'Leg Press', sets:3, repLow:10, repHigh:12, rir:2, rest:'2 min', inc:5, note:'', prehab:false},
       {name:'Seated Leg Curl', sets:3, repLow:10, repHigh:15, rir:1, rest:'90 s', inc:2.5, note:'', prehab:false},
       {name:'Standing Calf Raise', sets:3, repLow:10, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'Full ROM, pause at bottom', prehab:false},
-      {name:'Hanging Knee Raise', sets:3, repLow:10, repHigh:15, rir:1, rest:'60 s', inc:0, note:'Or cable crunch', prehab:false},
+      {name:'Tibialis Raises + Ankle Circles', sets:2, repLow:20, repHigh:20, rir:0, rest:'—', inc:0, note:'Bodyweight — ankle prehab', prehab:true},
     ]
   },
-  'Lower B': {
+  'Push B': {
     day: 'Thursday',
+    bias: 'Hypertrophy',
+    color: 'push-b',
+    warmup: ['3 min bike or row', 'Band pull-aparts × 15', 'Wrist extensor/flexor stretch 30s each'],
+    exercises: [
+      {name:'Incline DB Press', sets:4, repLow:8, repHigh:12, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
+      {name:'DB Bench Press', sets:3, repLow:8, repHigh:12, rir:2, rest:'2 min', inc:2.5, note:'Elbow-friendlier flat press than Push A barbell version', prehab:false},
+      {name:'Cable Fly', sets:3, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+      {name:'Arnold Press', sets:3, repLow:8, repHigh:12, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
+      {name:'DB Lateral Raise', sets:3, repLow:12, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+      {name:'Overhead Rope Extension', sets:2, repLow:15, repHigh:20, rir:2, rest:'60 s', inc:2.5, note:'SKIP if elbow flares', prehab:false},
+      {name:'Triceps Extension Machine', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+    ]
+  },
+  'Pull B': {
+    day: 'Friday',
+    bias: 'Hypertrophy',
+    color: 'pull-b',
+    warmup: ['3 min bike or row', 'Band pull-aparts × 15', 'Dead hang or lat activation 2×20s'],
+    exercises: [
+      {name:'Single-Arm DB Row', sets:3, repLow:10, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
+      {name:'Lat Pulldown (wide grip)', sets:3, repLow:8, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
+      {name:'Reverse Pec Deck', sets:3, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+      {name:'Cable Curl', sets:2, repLow:10, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
+      {name:'Incline DB Curl', sets:2, repLow:12, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'Stretched-position curl', prehab:false},
+    ]
+  },
+  'Legs B': {
+    day: 'Saturday',
     bias: 'Hypertrophy + Power',
-    color: 'lower-b',
+    color: 'legs-b',
     warmup: ['Banded lateral walks 2×10 each way', 'Glute bridge with tuck 2×12', 'Session ramp-up sets'],
     exercises: [
-      {name:'Trap Bar Deadlift', sets:3, repLow:4, repHigh:6, rir:3, rest:'3 min', inc:5, note:'Or conventional', prehab:false},
+      {name:'Conventional Deadlift', sets:3, repLow:4, repHigh:6, rir:3, rest:'3 min', inc:5, note:'Standard barbell — no waiting on shared equipment', prehab:false},
       {name:'Bulgarian Split Squat', sets:3, repLow:8, repHigh:10, rir:2, rest:'2 min', inc:2.5, note:'Per leg', prehab:false},
       {name:'Hip Thrust', sets:3, repLow:8, repHigh:12, rir:1, rest:'2 min', inc:5, note:'Tuck pelvis first, squeeze at top', prehab:false},
       {name:'Leg Extension', sets:2, repLow:12, repHigh:15, rir:1, rest:'90 s', inc:2.5, note:'', prehab:false},
       {name:'Seated Calf Raise', sets:3, repLow:12, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
-      {name:'Tibialis Raises + Ankle Circles', sets:2, repLow:20, repHigh:20, rir:0, rest:'—', inc:0, note:'Bodyweight — ankle prehab', prehab:true},
-    ]
-  },
-  'Upper B': {
-    day: 'Friday',
-    bias: 'Hypertrophy',
-    color: 'upper-b',
-    warmup: ['3 min bike or row', 'Band pull-aparts × 15', 'Wrist extensor/flexor stretch 30s each'],
-    exercises: [
-      {name:'Incline DB Press', sets:4, repLow:8, repHigh:12, rir:2, rest:'2 min', inc:2.5, note:'', prehab:false},
-      {name:'Single-Arm DB Row', sets:3, repLow:10, repHigh:12, rir:2, rest:'90 s', inc:2.5, note:'', prehab:false},
-      {name:'Machine Chest Press', sets:2, repLow:12, repHigh:15, rir:1, rest:'90 s', inc:2.5, note:'Or pec deck', prehab:false},
-      {name:'Cable Lateral Raise', sets:3, repLow:12, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
-      {name:'Face Pull', sets:3, repLow:15, repHigh:20, rir:1, rest:'60 s', inc:2.5, note:'Elbow rehab — always do this', prehab:false},
-      {name:'Hammer Curl', sets:2, repLow:10, repHigh:15, rir:1, rest:'60 s', inc:2.5, note:'', prehab:false},
-      {name:'Overhead Rope Extension', sets:2, repLow:15, repHigh:20, rir:2, rest:'60 s', inc:2.5, note:'SKIP if elbow flares', prehab:false},
     ]
   }
 };
@@ -438,52 +474,147 @@ const MILESTONES = [
   {date:'2026-12-19', week:24, kg:84, waist:35.5, label:'🎂 40th Birthday'},
 ];
 
-const ROTATION_ORDER = ['Upper A', 'Lower A', 'Upper B', 'Lower B'];
+const ROTATION_ORDER = ['Push A', 'Pull A', 'Legs A', 'Push B', 'Pull B', 'Legs B'];
 
 // Swap library, grouped by movement pattern. Free text is always offered
 // alongside these for anything not covered. Note: excludes flat barbell
 // bench, close-grip bench and skull crushers — Ben's elbow history rules
 // those out regardless of which slot they'd land in.
+// ════════════════════════════════════════════════════════════════
+// MOVEMENT SLOTS
+// A session is a list of movement slots (flat press, incline press, chest fly...).
+// Each slot has a pool of interchangeable exercises across equipment and gyms
+// (barbell, Hammer Strength, pin machine, cable, dumbbell). Swapping inside a
+// session only offers options from the same slot, and the post-session
+// coverage check works at slot level. Weights stay tied to the exercise name,
+// because a Hammer Strength incline and a DB incline are different loads.
+// ════════════════════════════════════════════════════════════════
+const SLOT_META = {
+  flat_press:        {label:'Flat press',            group:'Chest'},
+  incline_press:     {label:'Incline press',         group:'Chest'},
+  chest_fly:         {label:'Chest fly',             group:'Chest'},
+  vertical_press:    {label:'Shoulder press',        group:'Shoulders'},
+  lateral_delt:      {label:'Lateral raise',         group:'Shoulders'},
+  rear_delt:         {label:'Rear delt / face pull', group:'Shoulders'},
+  triceps_pushdown:  {label:'Triceps pushdown',      group:'Triceps'},
+  triceps_overhead:  {label:'Triceps overhead',      group:'Triceps'},
+  vertical_pull:     {label:'Vertical pull',         group:'Back'},
+  row_heavy:         {label:'Heavy row',             group:'Back'},
+  row_support:       {label:'Supported row',         group:'Back'},
+  biceps_lengthened: {label:'Biceps, stretched',     group:'Biceps'},
+  biceps_neutral:    {label:'Biceps, hammer / cable',group:'Biceps'},
+  squat_pattern:     {label:'Squat',                 group:'Quads'},
+  quad_press:        {label:'Leg press / hack',      group:'Quads'},
+  lunge_pattern:     {label:'Single-leg',            group:'Quads'},
+  knee_extension:    {label:'Leg extension',         group:'Quads'},
+  hinge_pattern:     {label:'Hip hinge',             group:'Hams & glutes'},
+  knee_flexion:      {label:'Hamstring curl',        group:'Hams & glutes'},
+  hip_extension:     {label:'Glute / hip thrust',    group:'Hams & glutes'},
+  calf:              {label:'Calves',                group:'Calves'},
+  core:              {label:'Core',                  group:'Core'},
+  ankle_prehab:      {label:'Ankle prehab',          group:'Rehab'},
+  elbow_prehab:      {label:'Elbow rehab',           group:'Rehab'}
+};
+
 const EXERCISE_LIBRARY = {
-  horizontal_press: [
-    {name:'DB Bench Press', repLow:5, repHigh:8, inc:2.5},
-    {name:'Incline DB Press', repLow:8, repHigh:12, inc:2.5},
+  flat_press: [
+    {name:'DB Bench Press', repLow:8, repHigh:12, inc:2.5},
+    {name:'Barbell Bench Press', repLow:5, repHigh:8, inc:2.5, note:'On the avoid-list from your elbow history — proceed knowingly'},
+    {name:'Pin Machine Chest Press', repLow:8, repHigh:12, inc:2.5},
+    {name:'Hammer Strength Chest Press', repLow:8, repHigh:12, inc:2.5},
     {name:'Machine Chest Press', repLow:10, repHigh:15, inc:2.5},
-    {name:'Pec Deck', repLow:12, repHigh:15, inc:2.5},
   ],
-  horizontal_pull: [
-    {name:'Chest-Supported Row', repLow:6, repHigh:10, inc:2.5},
-    {name:'Single-Arm DB Row', repLow:10, repHigh:12, inc:2.5},
-    {name:'Seated Cable Row', repLow:8, repHigh:12, inc:2.5},
-    {name:'Barbell Row', repLow:6, repHigh:10, inc:2.5},
+  incline_press: [
+    {name:'Incline DB Press', repLow:8, repHigh:12, inc:2.5},
+    {name:'Hammer Strength Incline Press', repLow:8, repHigh:12, inc:2.5},
+    {name:'Incline Machine Press', repLow:8, repHigh:12, inc:2.5},
+    {name:'Smith Incline Press', repLow:8, repHigh:12, inc:2.5},
+  ],
+  chest_fly: [
+    {name:'Pec Deck', repLow:12, repHigh:15, inc:2.5},
+    {name:'Cable Fly', repLow:12, repHigh:15, inc:2.5},
+    {name:'Low-to-High Cable Fly', repLow:12, repHigh:15, inc:2.5},
   ],
   vertical_press: [
     {name:'Seated DB Shoulder Press', repLow:8, repHigh:10, inc:2.5},
+    {name:'Hammer Strength Shoulder Press', repLow:8, repHigh:12, inc:2.5},
     {name:'Machine Shoulder Press', repLow:10, repHigh:12, inc:2.5},
     {name:'Arnold Press', repLow:8, repHigh:12, inc:2.5},
+  ],
+  lateral_delt: [
+    {name:'Cable Lateral Raise', repLow:12, repHigh:20, inc:2.5},
+    {name:'DB Lateral Raise', repLow:12, repHigh:20, inc:2.5},
+    {name:'Machine Lateral Raise', repLow:12, repHigh:20, inc:2.5},
+  ],
+  rear_delt: [
+    {name:'Face Pull', repLow:15, repHigh:20, inc:2.5},
+    {name:'Reverse Pec Deck', repLow:12, repHigh:15, inc:2.5},
+    {name:'Rear Delt Cable Fly', repLow:12, repHigh:20, inc:2.5},
+    {name:'Band Pull-Apart', repLow:15, repHigh:20, inc:0},
+  ],
+  triceps_pushdown: [
+    {name:'Cable Rope Pushdown', repLow:12, repHigh:15, inc:2.5, note:'Elbow-friendly'},
+    {name:'Straight-Bar Pushdown', repLow:10, repHigh:15, inc:2.5},
+    {name:'Triceps Extension Machine', repLow:12, repHigh:15, inc:2.5},
+  ],
+  triceps_overhead: [
+    {name:'Overhead Rope Extension', repLow:15, repHigh:20, inc:2.5, note:'SKIP if elbow flares'},
+    {name:'Overhead DB Extension', repLow:10, repHigh:15, inc:2.5, note:'Elbow-heavy — go light'},
+    {name:'Skull Crushers', repLow:10, repHigh:15, inc:2.5, note:'Elbow-heavy — EZ bar, light, stop if it nags'},
   ],
   vertical_pull: [
     {name:'Lat Pulldown (neutral grip)', repLow:8, repHigh:12, inc:2.5},
     {name:'Lat Pulldown (wide grip)', repLow:8, repHigh:12, inc:2.5},
     {name:'Assisted Pull-Up', repLow:6, repHigh:10, inc:2.5},
+    {name:'Pull-Up', repLow:5, repHigh:10, inc:0},
+  ],
+  row_heavy: [
+    {name:'Barbell Row', repLow:6, repHigh:10, inc:2.5},
+    {name:'Chest-Supported Row', repLow:6, repHigh:10, inc:2.5},
+    {name:'Single-Arm DB Row', repLow:10, repHigh:12, inc:2.5},
+    {name:'T-Bar Row', repLow:6, repHigh:10, inc:2.5},
+    {name:'Hammer Strength Row', repLow:8, repHigh:12, inc:2.5},
+  ],
+  row_support: [
+    {name:'Seated Cable Row', repLow:8, repHigh:12, inc:2.5},
+    {name:'Machine Row', repLow:8, repHigh:12, inc:2.5},
+    {name:'Single-Arm DB Row', repLow:10, repHigh:12, inc:2.5},
+    {name:'Chest-Supported Row', repLow:8, repHigh:12, inc:2.5},
+  ],
+  biceps_lengthened: [
+    {name:'Incline DB Curl', repLow:12, repHigh:15, inc:2.5},
+    {name:'Bayesian Cable Curl', repLow:10, repHigh:15, inc:2.5},
+  ],
+  biceps_neutral: [
+    {name:'Hammer Curl', repLow:10, repHigh:15, inc:2.5},
+    {name:'Cable Curl', repLow:10, repHigh:15, inc:2.5},
+    {name:'Preacher Curl', repLow:10, repHigh:15, inc:2.5},
+    {name:'EZ-Bar Curl', repLow:8, repHigh:12, inc:2.5},
   ],
   squat_pattern: [
     {name:'Back Squat', repLow:5, repHigh:8, inc:5},
     {name:'Front Squat', repLow:5, repHigh:8, inc:5},
     {name:'Hack Squat', repLow:8, repHigh:12, inc:5},
-    {name:'Leg Press', repLow:10, repHigh:12, inc:5},
     {name:'Goblet Squat', repLow:10, repHigh:15, inc:2.5},
   ],
-  hinge_pattern: [
-    {name:'Romanian Deadlift', repLow:6, repHigh:10, inc:5},
-    {name:'Trap Bar Deadlift', repLow:4, repHigh:6, inc:5},
-    {name:'Good Morning', repLow:8, repHigh:12, inc:2.5},
+  quad_press: [
+    {name:'Leg Press', repLow:10, repHigh:12, inc:5},
+    {name:'Hack Squat', repLow:8, repHigh:12, inc:5},
   ],
   lunge_pattern: [
     {name:'Bulgarian Split Squat', repLow:8, repHigh:10, inc:2.5},
     {name:'Walking Lunge', repLow:10, repHigh:12, inc:2.5},
     {name:'Reverse Lunge', repLow:10, repHigh:12, inc:2.5},
     {name:'Step-Up', repLow:8, repHigh:12, inc:2.5},
+  ],
+  knee_extension: [
+    {name:'Leg Extension', repLow:12, repHigh:15, inc:2.5},
+  ],
+  hinge_pattern: [
+    {name:'Romanian Deadlift', repLow:6, repHigh:10, inc:5},
+    {name:'Conventional Deadlift', repLow:4, repHigh:6, inc:5},
+    {name:'Trap Bar Deadlift', repLow:4, repHigh:6, inc:5},
+    {name:'Good Morning', repLow:8, repHigh:12, inc:2.5},
   ],
   knee_flexion: [
     {name:'Seated Leg Curl', repLow:10, repHigh:15, inc:2.5},
@@ -493,55 +624,47 @@ const EXERCISE_LIBRARY = {
     {name:'Hip Thrust', repLow:8, repHigh:12, inc:5},
     {name:'Cable Pull-Through', repLow:10, repHigh:15, inc:2.5},
   ],
-  knee_extension: [
-    {name:'Leg Extension', repLow:12, repHigh:15, inc:2.5},
-  ],
   calf: [
     {name:'Standing Calf Raise', repLow:10, repHigh:15, inc:2.5},
     {name:'Seated Calf Raise', repLow:12, repHigh:20, inc:2.5},
     {name:'Calf Press (leg press)', repLow:12, repHigh:15, inc:2.5},
   ],
-  elbow_flexion: [
-    {name:'Incline DB Curl', repLow:12, repHigh:15, inc:2.5},
-    {name:'Hammer Curl', repLow:10, repHigh:15, inc:2.5},
-    {name:'Cable Curl', repLow:10, repHigh:15, inc:2.5},
-  ],
-  elbow_extension: [
-    {name:'Cable Rope Pushdown', repLow:12, repHigh:15, inc:2.5, note:'Elbow-friendly'},
-    {name:'Overhead Rope Extension', repLow:15, repHigh:20, inc:2.5, note:'SKIP if elbow flares'},
-  ],
-  rear_delt: [
-    {name:'Face Pull', repLow:15, repHigh:20, inc:2.5},
-    {name:'Reverse Pec Deck', repLow:12, repHigh:15, inc:2.5},
-    {name:'Band Pull-Apart', repLow:15, repHigh:20, inc:0},
-  ],
-  lateral_delt: [
-    {name:'Cable Lateral Raise', repLow:12, repHigh:20, inc:2.5},
-    {name:'DB Lateral Raise', repLow:12, repHigh:20, inc:2.5},
-    {name:'Machine Lateral Raise', repLow:12, repHigh:20, inc:2.5},
-  ],
   core: [
     {name:'Hanging Knee Raise', repLow:10, repHigh:15, inc:0},
     {name:'Cable Crunch', repLow:12, repHigh:15, inc:2.5},
   ],
+  ankle_prehab: [
+    {name:'Tibialis Raises + Ankle Circles', repLow:20, repHigh:20, inc:0},
+  ],
+  elbow_prehab: [
+    {name:'Wrist Extensor Eccentrics', repLow:15, repHigh:15, inc:0},
+  ]
 };
 
-// Maps each default exercise name to its movement pattern, so tapping an
-// exercise offers relevant swaps rather than the whole library.
-const EXERCISE_PATTERN = {
-  'DB Bench Press':'horizontal_press', 'Chest-Supported Row':'horizontal_pull',
-  'Seated DB Shoulder Press':'vertical_press', 'Lat Pulldown (neutral grip)':'vertical_pull',
-  'Cable Rope Pushdown':'elbow_extension', 'Incline DB Curl':'elbow_flexion',
-  'Back Squat':'squat_pattern', 'Romanian Deadlift':'hinge_pattern',
-  'Leg Press':'squat_pattern', 'Seated Leg Curl':'knee_flexion',
-  'Standing Calf Raise':'calf', 'Hanging Knee Raise':'core',
-  'Trap Bar Deadlift':'hinge_pattern', 'Bulgarian Split Squat':'lunge_pattern',
-  'Hip Thrust':'hip_extension', 'Leg Extension':'knee_extension',
-  'Seated Calf Raise':'calf', 'Incline DB Press':'horizontal_press',
-  'Single-Arm DB Row':'horizontal_pull', 'Machine Chest Press':'horizontal_press',
-  'Cable Lateral Raise':'lateral_delt', 'Face Pull':'rear_delt',
-  'Hammer Curl':'elbow_flexion', 'Overhead Rope Extension':'elbow_extension',
+// Which slot each default exercise fills, per session, in order.
+const SESSION_SLOTS = {
+  'Push A': [['Barbell Bench Press','flat_press'],['Incline DB Press','incline_press'],['Pec Deck','chest_fly'],['Seated DB Shoulder Press','vertical_press'],['Cable Lateral Raise','lateral_delt'],['Cable Rope Pushdown','triceps_pushdown'],['Overhead Rope Extension','triceps_overhead'],['Wrist Extensor Eccentrics','elbow_prehab']],
+  'Pull A': [['Barbell Row','row_heavy'],['Lat Pulldown (neutral grip)','vertical_pull'],['Seated Cable Row','row_support'],['Face Pull','rear_delt'],['Incline DB Curl','biceps_lengthened'],['Hammer Curl','biceps_neutral']],
+  'Legs A': [['Back Squat','squat_pattern'],['Romanian Deadlift','hinge_pattern'],['Leg Press','quad_press'],['Seated Leg Curl','knee_flexion'],['Standing Calf Raise','calf'],['Tibialis Raises + Ankle Circles','ankle_prehab']],
+  'Push B': [['Incline DB Press','incline_press'],['DB Bench Press','flat_press'],['Cable Fly','chest_fly'],['Arnold Press','vertical_press'],['DB Lateral Raise','lateral_delt'],['Overhead Rope Extension','triceps_overhead'],['Triceps Extension Machine','triceps_pushdown']],
+  'Pull B': [['Single-Arm DB Row','row_heavy'],['Lat Pulldown (wide grip)','vertical_pull'],['Reverse Pec Deck','rear_delt'],['Cable Curl','biceps_neutral'],['Incline DB Curl','biceps_lengthened']],
+  'Legs B': [['Conventional Deadlift','hinge_pattern'],['Bulgarian Split Squat','lunge_pattern'],['Hip Thrust','hip_extension'],['Leg Extension','knee_extension'],['Seated Calf Raise','calf']]
 };
+Object.keys(SESSION_SLOTS).forEach(sn=>{
+  SESSION_SLOTS[sn].forEach(([name,slot])=>{
+    const ex = SESSIONS[sn].exercises.find(e=>e.name===name);
+    if(ex) ex.slot = slot;
+  });
+});
+// First slot an exercise name appears in. Used for old history and typed names;
+// anything that carries its own .slot (all session exercises) wins over this.
+const SLOT_BY_NAME = {};
+Object.keys(EXERCISE_LIBRARY).forEach(slot=>{
+  EXERCISE_LIBRARY[slot].forEach(o=>{ if(!SLOT_BY_NAME[o.name]) SLOT_BY_NAME[o.name] = slot; });
+});
+function slotOfName(name){ return SLOT_BY_NAME[name] || null; }
+function slotOf(ex){ return (ex && ex.slot) || slotOfName(ex && (ex.originalName || ex.name)) || null; }
+function slotLabel(ex){ const sl = slotOf(ex); return sl && SLOT_META[sl] ? SLOT_META[sl].label : ''; }
 
 // ════════════════════════════════════════════════════════════════
 // STORAGE
@@ -559,11 +682,14 @@ function saveWeights(w){try{localStorage.setItem(BP_KEY,JSON.stringify(w));}catc
 // Stored under weights._meta (a reserved key — real exercise names are
 // always lowercased text, so this can't collide with progression history).
 // ════════════════════════════════════════════════════════════════
+const SPLIT_VERSION = 'ppl-v1';
 function getMeta(){
   const w = loadWeights();
-  if(!w._meta){
-    // First run under the new system: figure out where the rotation should
-    // resume from, using the last logged Blueprint session, so nothing repeats.
+  if(!w._meta || w._meta.splitVersion !== SPLIT_VERSION){
+    // First run under this split (or switching splits): figure out where the
+    // rotation should resume from, using the last logged session under THIS
+    // split's naming — a session logged under a previous split (e.g. 'Upper A')
+    // won't match ROTATION_ORDER, so this safely starts fresh at position 0.
     const s = load();
     const lastBp = (s.workouts||[]).filter(x=>x.bpSession).sort((a,b)=>b.date.localeCompare(a.date))[0];
     let startPos = 0;
@@ -571,7 +697,7 @@ function getMeta(){
       const idx = ROTATION_ORDER.indexOf(lastBp.bpSession);
       if(idx > -1) startPos = (idx + 1) % ROTATION_ORDER.length;
     }
-    w._meta = {rotationPosition: startPos, overrides: {}, todayOverride: null};
+    w._meta = {rotationPosition: startPos, overrides: {}, todayOverride: null, splitVersion: SPLIT_VERSION};
     saveWeights(w);
   }
   if(!w._meta.overrides) w._meta.overrides = {};
@@ -639,12 +765,12 @@ function setSwap(slotName, originalName, newExData, makeDefault){
     saveMeta(meta);
   }
 }
-function addExerciseToday(slotName, exData){
+function addExerciseToday(slotName, exData, slotId){
   const meta = getMeta();
   if(!meta.todayOverride || meta.todayOverride.date !== td() || meta.todayOverride.slot !== slotName){
     meta.todayOverride = {date:td(), slot:slotName, swaps:{}, added:[], removed:[]};
   }
-  meta.todayOverride.added.push({name:exData.name, sets:3, repLow:exData.repLow, repHigh:exData.repHigh, rir:2, rest:'90 s', inc:exData.inc, note:exData.note||'', prehab:false});
+  meta.todayOverride.added.push({name:exData.name, sets:3, repLow:exData.repLow, repHigh:exData.repHigh, rir:2, rest:'90 s', inc:exData.inc, note:exData.note||'', prehab:false, slot:slotId||null});
   saveMeta(meta);
 }
 function removeExerciseToday(slotName, ex){
@@ -687,14 +813,31 @@ function getSetsForSession(sessionName, weekNum){
   const session = SESSIONS[sessionName];
   if(!session) return session;
   const deload = isDeloadWeek(weekNum);
-  const withOverrides = applyOverridesToExercises(sessionName, session.exercises);
+  const short = isShortToday();
+  const rt = getReturnStep();
+  let withOverrides = applyOverridesToExercises(sessionName, session.exercises);
+  const plan = short ? SHORT_PLAN[sessionName] : null;
+  if(plan){
+    // 30-minute version: keep the plan's exercises (matched on the ORIGINAL name so
+    // swaps still work), at the plan's set counts. Anything added today is kept.
+    withOverrides = withOverrides.filter(ex => ex.added || plan[ex.originalName || ex.name] !== undefined)
+      .map(ex => ex.added ? ex : {...ex, sets: plan[ex.originalName || ex.name]});
+  }
   return {
     ...session,
+    warmup: short ? session.warmup.slice(0,2) : session.warmup,
     isDeload: deload,
+    isShort: !!plan,
+    returnStep: rt,
     exercises: withOverrides.map(ex => {
       let sets = ex.sets;
       if(deload) sets = Math.max(1, Math.ceil(sets/2));
-      return {...ex, effectiveSets: sets};
+      let out = {...ex};
+      if(rt && !ex.prehab){
+        sets = Math.max(2, Math.round(sets * rt.sets));
+        out.rir = Math.max(ex.rir, rt.rirMin);
+      }
+      return {...out, effectiveSets: sets};
     }).filter(ex => ex.effectiveSets > 0)
   };
 }
@@ -706,16 +849,24 @@ function getCurrentWeight(exName, weekNum){
   const weights = loadWeights();
   const key = exName.toLowerCase();
   if(!weights[key]) return null;
-  const history = weights[key]; // array of {week, weight, reps, date}
+  const history = weights[key]; // array of {week, weight, reps, date, rtn?}, oldest first
   if(!history.length) return null;
-  const sorted = [...history].sort((a,b)=>b.week-a.week);
-  return sorted[0];
+  // Most recent FULL-effort entry. Entries logged while easing back in (rtn)
+  // are skipped so a deliberately light return session never becomes the new
+  // baseline. Same-week entries resolve to the latest one logged (an exercise
+  // can appear in both the A and B session of one week).
+  for(let i=history.length-1;i>=0;i--){ if(!history[i].rtn) return history[i]; }
+  return history[history.length-1];
 }
 
 function getProgressionWeight(exName, ex, weekNum){
   const last = getCurrentWeight(exName, weekNum);
   if(!last) return null;
   const isDeload = isDeloadWeek(weekNum);
+  const rt = getReturnStep();
+  if(rt && !ex.prehab && last.weight>0){
+    return {weight: Math.round(last.weight * rt.w * 2)/2, reason:'return', lastWeight:last.weight};
+  }
   if(isDeload) return {weight: Math.round(last.weight * 0.8 * 2)/2, reason:'deload', lastWeight:last.weight};
   // Double progression: if they hit the top of rep range last time, add weight
   if(last.reps >= ex.repHigh) return {weight: last.weight + ex.inc, reason:'progress', lastWeight:last.weight};
@@ -727,7 +878,9 @@ function saveExerciseResult(exName, weight, reps, weekNum){
   const weights = loadWeights();
   const key = exName.toLowerCase();
   if(!weights[key]) weights[key] = [];
-  weights[key].push({week:weekNum, weight, reps, date:td()});
+  const entry = {week:weekNum, weight, reps, date:td()};
+  if(getReturnStep()) entry.rtn = true;
+  weights[key].push(entry);
   // Keep last 30 entries
   if(weights[key].length > 30) weights[key] = weights[key].slice(-30);
   saveWeights(weights);
@@ -748,10 +901,215 @@ function showTab(t){
   if(t==='history') renderHistory();
 }
 
+
+// ════════════════════════════════════════════════════════════════
+// 30-MINUTE FALLBACK  (per-day switch, resets itself tomorrow)
+// Same slot in the rotation, fewer exercises and sets: the big lift(s) first,
+// one or two accessories, and the elbow/ankle prehab kept where it exists.
+// ════════════════════════════════════════════════════════════════
+const SHORT_PLAN = {
+  'Push A': {'Barbell Bench Press':3, 'Incline DB Press':2, 'Seated DB Shoulder Press':2, 'Cable Rope Pushdown':2, 'Wrist Extensor Eccentrics':1},
+  'Pull A': {'Barbell Row':3, 'Lat Pulldown (neutral grip)':3, 'Face Pull':2, 'Incline DB Curl':2, 'Hammer Curl':2},
+  'Legs A': {'Back Squat':3, 'Romanian Deadlift':2, 'Seated Leg Curl':2, 'Standing Calf Raise':2, 'Tibialis Raises + Ankle Circles':1},
+  'Push B': {'Incline DB Press':3, 'DB Bench Press':2, 'DB Lateral Raise':2, 'Overhead Rope Extension':2, 'Triceps Extension Machine':1},
+  'Pull B': {'Single-Arm DB Row':3, 'Lat Pulldown (wide grip)':3, 'Reverse Pec Deck':2, 'Cable Curl':2, 'Incline DB Curl':1},
+  'Legs B': {'Conventional Deadlift':3, 'Hip Thrust':3, 'Bulgarian Split Squat':2, 'Seated Calf Raise':2}
+};
+function isShortToday(){
+  const m = getMeta();
+  return !!(m.shortDate && m.shortDate === td());
+}
+function setShortToday(on){
+  const m = getMeta();
+  m.shortDate = on ? td() : null;
+  saveMeta(m);
+  renderToday();
+}
+
+// ════════════════════════════════════════════════════════════════
+// RETURN-FROM-BREAK MODE
+// 7+ days since the last strength session (any app) switches this on. The next
+// four sessions are capped below full effort, then it switches itself off.
+// ════════════════════════════════════════════════════════════════
+const RETURN_RAMP = [
+  {sets:0.60, w:0.85, rirMin:3},
+  {sets:0.75, w:0.90, rirMin:3},
+  {sets:0.85, w:0.95, rirMin:2},
+  {sets:0.85, w:0.95, rirMin:2}
+];
+const RETURN_GAP_DAYS = 7;
+function daysBetween(a, b){
+  return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000);
+}
+function lastStrengthDate(){
+  const ds = (load().workouts||[]).filter(w=>w.type==='strength' && w.date).map(w=>w.date).sort();
+  return ds.length ? ds[ds.length-1] : null;
+}
+// Called when Today renders: starts return mode if the gap is long enough.
+function checkReturnMode(){
+  const m = getMeta();
+  if(m.returnMode && m.returnMode.active) return;
+  const last = lastStrengthDate();
+  if(!last) return;
+  const gap = daysBetween(last, td());
+  if(gap >= RETURN_GAP_DAYS){
+    m.returnMode = {active:true, done:0, gapDays:gap, startedOn:td()};
+    saveMeta(m);
+  }
+}
+function getReturnStep(){
+  const m = getMeta();
+  if(!m.returnMode || !m.returnMode.active) return null;
+  const i = Math.min(m.returnMode.done, RETURN_RAMP.length-1);
+  return {...RETURN_RAMP[i], index:i, total:RETURN_RAMP.length};
+}
+function bumpReturnMode(){
+  const m = getMeta();
+  if(!m.returnMode || !m.returnMode.active) return;
+  m.returnMode.done += 1;
+  if(m.returnMode.done >= RETURN_RAMP.length){
+    m.returnMode.active = false;
+    m.returnMode.finishedOn = td();
+  }
+  saveMeta(m);
+}
+function endReturnMode(){
+  const m = getMeta();
+  if(m.returnMode){ m.returnMode.active = false; m.returnMode.finishedOn = td(); }
+  saveMeta(m);
+  renderToday();
+}
+
+// ════════════════════════════════════════════════════════════════
+// WEEKLY SESSION FLOOR  (Mon–Sun; 3 = floor, 4 = bonus)
+// Counts distinct days with a strength session from either lifting app.
+// ════════════════════════════════════════════════════════════════
+const WEEK_FLOOR = 3, WEEK_BONUS = 4;
+function weekBounds(){
+  const n = new Date();
+  const dow = (n.getDay()+6)%7; // Monday = 0
+  const start = new Date(n.getFullYear(), n.getMonth(), n.getDate()-dow);
+  const f = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return {start:f(start), end:f(new Date(start.getFullYear(), start.getMonth(), start.getDate()+6)), dow};
+}
+function weekSessionCount(){
+  const b = weekBounds();
+  const days = new Set((load().workouts||[]).filter(w=>w.type==='strength' && w.date>=b.start && w.date<=b.end).map(w=>w.date));
+  return days.size;
+}
+function weekFloorHtml(){
+  const done = weekSessionCount();
+  const b = weekBounds();
+  const daysLeft = 7 - b.dow; // including today
+  let dots = '';
+  for(let i=1;i<=WEEK_BONUS;i++){
+    const on = i<=done;
+    const bonus = i===WEEK_BONUS;
+    dots += `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;margin-right:6px;font-size:12px;font-weight:800;border:2px ${bonus?'dashed':'solid'} ${on?'var(--accent)':'var(--border)'};background:${on?'var(--accent)':'transparent'};color:${on?'#0a0f07':'var(--text3)'}">${on?'✓':(bonus?'+':i)}</span>`;
+  }
+  let msg;
+  if(done >= WEEK_BONUS) msg = 'Bonus session done. Anything extra is recovery.';
+  else if(done >= WEEK_FLOOR) msg = 'Floor hit. A 4th session is a bonus, not an obligation.';
+  else {
+    const need = WEEK_FLOOR - done;
+    if(need > daysLeft) msg = `${need} to go with ${daysLeft} day${daysLeft===1?'':'s'} left. Floor is out of reach, so do what you can and reset Monday.`;
+    else if(need === daysLeft) msg = `${need} to go and ${daysLeft} day${daysLeft===1?'':'s'} left. Every remaining day counts, so use the 30-min version if needed.`;
+    else msg = `${need} more to hit the floor, ${daysLeft} day${daysLeft===1?'':'s'} left.`;
+  }
+  return `<div style="margin:0 16px 10px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs)">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px">This week · ${done} of ${WEEK_FLOOR} <span style="color:var(--text3)">(+1 bonus)</span></div>
+    <div style="display:flex;align-items:center">${dots}</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">${msg}</div>
+  </div>`;
+}
+
+function weightTagHtml(last, prog, ex, i){
+  if(!last) return `<span class="ex-weight-tag new">First time</span>`;
+  if(prog.reason==='return') return `<span class="ex-weight-tag new" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">easing back → ${prog.weight}kg</span></span>`;
+  if(prog.reason==='deload') return `<span class="ex-weight-tag new" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">(deload → ${prog.weight}kg)</span></span>`;
+  if(prog.reason==='progress') return `<span class="ex-weight-tag prog" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">↑ next: ${prog.weight}kg</span></span>`;
+  if(prog.reason==='drop') return `<span class="ex-weight-tag toohard" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">⚠ too heavy — try ${prog.weight}kg</span></span>`;
+  return `<span class="ex-weight-tag hold" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">hold — hit ${ex.repHigh} reps to progress</span></span>`;
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// MOVEMENT COVERAGE
+// ════════════════════════════════════════════════════════════════
+// Slots the session was supposed to hit: the full template, or the 30-minute
+// plan's own slots when the short version was used.
+function expectedSlots(sessionName, isShort){
+  const tpl = SESSION_SLOTS[sessionName] || [];
+  if(isShort && SHORT_PLAN[sessionName]){
+    return tpl.filter(([n]) => SHORT_PLAN[sessionName][n] !== undefined).map(([n,sl]) => sl);
+  }
+  return tpl.map(([n,sl]) => sl);
+}
+function coverageFor(sessionName, isShort, loggedExercises){
+  const expected = expectedSlots(sessionName, isShort);
+  const hits = {};
+  loggedExercises.forEach(e => {
+    const sl = e.slot || slotOfName(e.name);
+    if(sl && !hits[sl]) hits[sl] = e.name;
+  });
+  const rows = expected.map(sl => ({slot:sl, label:SLOT_META[sl].label, done:!!hits[sl], name:hits[sl]||null}));
+  const extras = Object.keys(hits).filter(sl => !expected.includes(sl)).map(sl => ({slot:sl, label:SLOT_META[sl].label, name:hits[sl]}));
+  return {rows, extras};
+}
+function coverageHtml(cov, isShort){
+  const missed = cov.rows.filter(r=>!r.done);
+  const head = missed.length
+    ? `<span style="color:var(--orange)">${missed.length} movement${missed.length===1?'':'s'} skipped</span>`
+    : `<span style="color:var(--green)">Every movement covered</span>`;
+  const rows = cov.rows.map(r =>
+    `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--border);font-size:11.5px">
+      <span style="color:${r.done?'var(--text)':'var(--orange)'}">${r.done?'✓':'✗'} ${r.label}</span>
+      <span style="color:var(--text3);text-align:right">${r.done?r.name:'skipped'}</span>
+    </div>`).join('');
+  const extra = cov.extras.length
+    ? `<div style="font-size:10px;color:var(--text3);margin-top:6px">Extra: ${cov.extras.map(x=>x.name).join(', ')}</div>` : '';
+  return `<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between"><span>Movements${isShort?' · short version':''}</span>${head}</div>${rows}${extra}`;
+}
+
+// Sets per muscle group over the last 7 days, across every logged strength session.
+function weeklyTally(){
+  const since = new Date(); since.setDate(since.getDate()-6);
+  const f = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const from = f(since);
+  const groups = {};
+  const order = ['Chest','Shoulders','Triceps','Back','Biceps','Quads','Hams & glutes','Calves'];
+  order.forEach(g => groups[g] = 0);
+  (load().workouts||[]).filter(w => w.type==='strength' && w.date>=from).forEach(w => {
+    (w.exercises||[]).forEach(e => {
+      const sl = e.slot || slotOfName(e.name);
+      const g = sl && SLOT_META[sl] ? SLOT_META[sl].group : null;
+      if(g && g in groups) groups[g] += (e.sets||[]).length;
+    });
+  });
+  return {groups, order};
+}
+function renderTally(){
+  const el = document.getElementById('tally-card');
+  if(!el) return;
+  const t = weeklyTally();
+  const TARGET = 10;
+  el.innerHTML = t.order.map(g => {
+    const n = t.groups[g];
+    const pct = Math.min(100, Math.round(n/TARGET*100));
+    const col = n >= TARGET ? 'var(--green)' : (n >= 5 ? 'var(--gold)' : (n > 0 ? 'var(--orange)' : 'var(--border2)'));
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+      <div style="width:88px;font-size:11.5px;color:var(--text2)">${g}</div>
+      <div style="flex:1;height:6px;border-radius:3px;background:var(--bg3)"><div style="height:6px;border-radius:3px;width:${pct}%;background:${col}"></div></div>
+      <div style="width:52px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)">${n} sets</div>
+    </div>`;
+  }).join('') + `<div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5">Last 7 days. Around ${TARGET}+ hard sets per muscle per week is a good working target. Hitting each group twice in a week is the easier way to get there.</div>`;
+}
+
 // ════════════════════════════════════════════════════════════════
 // RENDER TODAY
 // ════════════════════════════════════════════════════════════════
 function renderToday(){
+  checkReturnMode();
   const weekNum = getWeekNum();
   const deload = isDeloadWeek(weekNum);
   const sessionName = getTodaySession();
@@ -779,24 +1137,26 @@ function renderToday(){
 
   _todayExercises = sessionData.exercises;
 
+  const rt = sessionData.returnStep;
+  const returnHtml = rt ? `<div style="margin:0 16px 10px;padding:11px 14px;background:rgba(91,141,238,.08);border:1px solid rgba(91,141,238,.35);border-radius:var(--rs);font-size:11.5px;color:var(--text2);line-height:1.5">
+      <strong style="color:var(--blue)">Easing back in · session ${rt.index+1} of ${rt.total}</strong><br>
+      About ${Math.round(rt.sets*100)}% of the usual sets, weights at ${Math.round(rt.w*100)}%, stop with at least ${rt.rirMin} reps in reserve. Leave the tank partly full on purpose.
+      <span onclick="endReturnMode()" style="display:block;margin-top:6px;font-size:10px;color:var(--text3);text-decoration:underline;cursor:pointer">Skip this and train at full effort</span>
+    </div>` : '';
+  const short = sessionData.isShort;
+  const modeHtml = `<div style="display:flex;gap:6px;margin:0 16px 10px">
+      <button onclick="setShortToday(false)" style="flex:1;padding:9px;border-radius:var(--rs);border:1px solid ${short?'var(--border)':'var(--gold)'};background:${short?'transparent':'var(--gold-d)'};color:${short?'var(--text3)':'var(--gold)'};font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Full · ~60 min</button>
+      <button onclick="setShortToday(true)" style="flex:1;padding:9px;border-radius:var(--rs);border:1px solid ${short?'var(--gold)':'var(--border)'};background:${short?'var(--gold-d)':'transparent'};color:${short?'var(--gold)':'var(--text3)'};font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">Short · ~30 min</button>
+    </div>`;
+
   let exHtml = _todayExercises.map((ex, i) => {
     const last = getCurrentWeight(ex.name, weekNum);
     const prog = getProgressionWeight(ex.name, ex, weekNum);
-    let weightTag;
-    if(!last){
-      weightTag = `<span class="ex-weight-tag new">First time</span>`;
-    } else if(prog.reason==='deload'){
-      weightTag = `<span class="ex-weight-tag new" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">(deload → ${prog.weight}kg)</span></span>`;
-    } else if(prog.reason==='progress'){
-      weightTag = `<span class="ex-weight-tag prog" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">↑ next: ${prog.weight}kg</span></span>`;
-    } else if(prog.reason==='drop'){
-      weightTag = `<span class="ex-weight-tag toohard" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">⚠ too heavy — try ${prog.weight}kg</span></span>`;
-    } else {
-      weightTag = `<span class="ex-weight-tag hold" onclick="showLastPerf(${i})">${last.weight}kg <span class="ex-weight-sub">hold — hit ${ex.repHigh} reps to progress</span></span>`;
-    }
+    const weightTag = weightTagHtml(last, prog, ex, i);
     return `<div class="ex-row" id="logex-${i}">
       <div class="ex-num">${i+1}</div>
       <div class="ex-body">
+        ${slotLabel(ex)?`<div style="font-size:8.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:700;margin-bottom:2px">${slotLabel(ex)}</div>`:''}
         <div class="ex-name" onclick="openSwapModal(${i})">${ex.name} <span class="ex-swap-hint">⇄ swap</span></div>
         <div class="ex-spec">${ex.effectiveSets}×${ex.repLow}${ex.repLow!==ex.repHigh?'–'+ex.repHigh:''} reps · RIR ${ex.rir} · ${ex.rest}</div>
         ${ex.note?`<div class="ex-note">${ex.note}</div>`:''}
@@ -807,13 +1167,16 @@ function renderToday(){
   }).join('');
 
   container.innerHTML = `
+    ${weekFloorHtml()}
+    ${returnHtml}
+    ${modeHtml}
     ${jumpHtml}
     <div style="padding:0 16px;margin-bottom:8px">
       <div class="session-card ${sessionData.color}">
         <div class="session-hdr">
           <div>
             <div class="session-name">${sessionName}</div>
-            <div class="session-meta">Session ${posIdx+1} of 4 · ${sessionData.bias} · ${deload?'DELOAD — ':''} ~60 min</div>
+            <div class="session-meta">Session ${posIdx+1} of ${ROTATION_ORDER.length} · ${sessionData.bias} · ${deload?'DELOAD — ':''}${short?'SHORT — ~30 min':'~60 min'}</div>
           </div>
           <span class="session-bias" style="color:var(--gold);border-color:rgba(200,168,75,.3)">${sessionData.exercises.length} exercises</span>
         </div>
@@ -823,7 +1186,10 @@ function renderToday(){
     </div>
     ${doneTodayBP?'<div style="margin:0 16px 10px;padding:11px 14px;background:rgba(126,217,87,.08);border:1px solid rgba(126,217,87,.3);border-radius:var(--rs);font-size:12px;color:var(--accent)">✓ Session already logged today</div>':''}`;
 
+  const oldBtn = document.getElementById('start-btn');
+  if(oldBtn) oldBtn.remove();
   const btn = document.createElement('button');
+  btn.id = 'start-btn';
   btn.className = 'start-btn';
   btn.innerHTML = doneTodayBP ? '&#x1F3CB; Log Another Session' : '&#x1F3CB; Start ' + sessionName;
   btn.onclick = () => startLogging(sessionName, weekNum);
@@ -831,7 +1197,7 @@ function renderToday(){
 }
 
 function showLastPerf(i){
-  const ex = _todayExercises[i];
+  const ex = (_currentTab==='today' ? _todayExercises : _activeSession.exercises)[i];
   const last = getCurrentWeight(ex.name, getWeekNum());
   if(!last) return;
   toast(`Last time: ${last.weight}kg × ${last.reps} reps (${fd(last.date)})`);
@@ -847,19 +1213,22 @@ function removeExerciseAt(i){
 }
 
 // ════════════════════════════════════════════════════════════════
-// SWAP MODAL
+// SWAP MODAL — works both on the Today preview and mid-session.
+// _swapInSession tracks which list/rerender path to use.
 // ════════════════════════════════════════════════════════════════
 let _swapExIndex = null;
-function openSwapModal(i){
+let _swapInSession = false;
+function openSwapModal(i, inSession){
   _swapExIndex = i;
-  const ex = _todayExercises[i];
+  _swapInSession = !!inSession;
+  const ex = (inSession ? _activeSession.exercises : _todayExercises)[i];
   const originalName = ex.originalName || ex.name;
-  const pattern = EXERCISE_PATTERN[originalName];
+  const pattern = slotOf(ex);
   const options = pattern ? EXERCISE_LIBRARY[pattern].filter(o=>o.name!==ex.name) : [];
 
   document.getElementById('swap-title').textContent = 'Swap ' + ex.name;
-  document.getElementById('swap-sub').textContent = pattern ? 'Same movement pattern' : 'No matching pattern on file — use free text';
-  document.getElementById('swap-slot-name').textContent = getTodaySession();
+  document.getElementById('swap-sub').textContent = pattern ? 'Same movement: ' + SLOT_META[pattern].label + '. Any machine or gym counts, or type your own.' : 'No matching movement on file — use free text';
+  document.getElementById('swap-slot-name').textContent = inSession ? _activeSessionName : getTodaySession();
   document.getElementById('swap-freetext').value = '';
   document.getElementById('swap-make-default').checked = false;
 
@@ -885,29 +1254,32 @@ function closeSwapModal(){
 }
 function confirmSwap(){
   if(_swapExIndex===null) return;
-  const ex = _todayExercises[_swapExIndex];
+  const ex = (_swapInSession ? _activeSession.exercises : _todayExercises)[_swapExIndex];
   const originalName = ex.originalName || ex.name;
   const newName = document.getElementById('swap-freetext').value.trim();
   if(!newName){ toast('Pick or type a replacement'); return; }
 
-  const pattern = EXERCISE_PATTERN[originalName];
+  const pattern = slotOf(ex);
   const libMatch = pattern ? EXERCISE_LIBRARY[pattern].find(o=>o.name===newName) : null;
   const newExData = libMatch || {name:newName, repLow:ex.repLow, repHigh:ex.repHigh, inc:ex.inc, note:''};
   const makeDefault = document.getElementById('swap-make-default').checked;
+  const slotName = _swapInSession ? _activeSessionName : getTodaySession();
 
-  setSwap(getTodaySession(), originalName, newExData, makeDefault);
+  setSwap(slotName, originalName, newExData, makeDefault);
   closeSwapModal();
-  renderToday();
+  if(_swapInSession) rerenderSessionExercises(); else renderToday();
   toast(makeDefault ? `${newExData.name} is now the default here` : `Swapped to ${newExData.name} for today`);
 }
 
 // ════════════════════════════════════════════════════════════════
-// ADD EXERCISE MODAL
+// ADD EXERCISE MODAL — same dual-context pattern as swap.
 // ════════════════════════════════════════════════════════════════
-function openAddModal(){
+let _addInSession = false;
+function openAddModal(inSession){
+  _addInSession = !!inSession;
   const sel = document.getElementById('add-pattern-select');
-  sel.innerHTML = '<option value="">Choose a movement pattern…</option>' +
-    Object.keys(EXERCISE_LIBRARY).map(p=>`<option value="${p}">${p.replace(/_/g,' ')}</option>`).join('');
+  sel.innerHTML = '<option value="">Choose a movement…</option>' +
+    Object.keys(EXERCISE_LIBRARY).map(p=>`<option value="${p}">${SLOT_META[p].group} · ${SLOT_META[p].label}</option>`).join('');
   document.getElementById('add-options').innerHTML = '';
   document.getElementById('add-freetext').value = '';
   document.getElementById('add-overlay').classList.add('show');
@@ -932,9 +1304,10 @@ function confirmAdd(){
   const pattern = document.getElementById('add-pattern-select').value;
   const libMatch = pattern ? EXERCISE_LIBRARY[pattern].find(o=>o.name===name) : null;
   const exData = libMatch || {name, repLow:8, repHigh:12, inc:2.5};
-  addExerciseToday(getTodaySession(), exData);
+  const slotName = _addInSession ? _activeSessionName : getTodaySession();
+  addExerciseToday(slotName, exData, pattern || slotOfName(name) || null);
   closeAddModal();
-  renderToday();
+  if(_addInSession) rerenderSessionExercises(); else renderToday();
   toast(name + ' added for today');
 }
 
@@ -968,11 +1341,23 @@ function startLogging(sessionName, weekNum){
       <div class="prehab-text">${item}</div>
     </div>`).join('');
 
-  // Exercise inputs
+  renderSessionExerciseList();
+
+  // Show logging view
+  document.getElementById('view-log').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function renderSessionExerciseList(){
+  const weekNum = _activeWeek;
   const container = document.getElementById('log-exercises');
   container.innerHTML = _activeSession.exercises.map((ex, ei)=>{
+    const last = getCurrentWeight(ex.name, weekNum);
     const prog = getProgressionWeight(ex.name, ex, weekNum);
     const suggestedWeight = prog ? prog.weight : '';
+
+    const weightTag = weightTagHtml(last, prog, ex, ei);
+
     const sets = [];
     for(let s=0;s<ex.effectiveSets;s++){
       sets.push(`<tr class="set-row">
@@ -981,7 +1366,6 @@ function startLogging(sessionName, weekNum){
           value="${suggestedWeight}" id="w-${ei}-${s}" placeholder="kg"></td>
         <td><input class="set-inp" type="number" inputmode="numeric"
           value="${ex.repLow}" id="r-${ei}-${s}" placeholder="reps"></td>
-        ${prog?`<td class="set-prev">${prog.lastWeight||'—'}</td>`:'<td class="set-prev">—</td>'}
       </tr>`);
     }
     const rirBtns = [0,1,2,3,4].map(r=>
@@ -991,14 +1375,19 @@ function startLogging(sessionName, weekNum){
     return `<div class="log-ex" id="logex-${ei}">
       <div class="log-ex-hdr">
         <div>
-          <div class="log-ex-name">${ex.name}</div>
+          ${slotLabel(ex)?`<div style="font-size:8.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:700;margin-bottom:2px">${slotLabel(ex)}</div>`:''}
+          <div class="log-ex-name" onclick="openSwapModal(${ei},true)">${ex.name} <span class="ex-swap-hint">⇄ swap</span></div>
           <div class="log-ex-target">Target: ${ex.effectiveSets}×${ex.repLow}${ex.repLow!==ex.repHigh?'–'+ex.repHigh:''} · RIR ${ex.rir}</div>
           ${ex.note?`<div style="font-size:9px;color:var(--orange);margin-top:2px">${ex.note}</div>`:''}
+          <div style="margin-top:6px">${weightTag}</div>
         </div>
-        ${ex.prehab?'<span style="font-size:9px;color:var(--orange);font-weight:700">REHAB</span>':''}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${ex.prehab?'<span style="font-size:9px;color:var(--orange);font-weight:700">REHAB</span>':''}
+          <button class="ex-remove" onclick="event.stopPropagation();removeExerciseInSession(${ei})" title="Remove from today">✕</button>
+        </div>
       </div>
       <table class="set-table" width="100%">
-        <thead><tr><th>#</th><th>kg</th><th>Reps</th><th style="font-size:8px;color:var(--text3)">Last</th></tr></thead>
+        <thead><tr><th>#</th><th>kg</th><th>Reps</th></tr></thead>
         <tbody>${sets.join('')}</tbody>
       </table>
       <div class="rir-row">
@@ -1008,11 +1397,54 @@ function startLogging(sessionName, weekNum){
       </div>
     </div>`;
   }).join('');
-
-  // Show logging view
-  document.getElementById('view-log').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
+  container.innerHTML += `<button class="add-ex-btn" onclick="openAddModal(true)">+ Add an exercise</button>`;
 }
+
+// Preserve entered weight/reps/RIR across a swap/add/remove mid-session,
+// keyed by the exercise's stable identity so unrelated rows are untouched.
+function snapshotSessionInputs(){
+  const snap = {};
+  _activeSession.exercises.forEach((ex,ei)=>{
+    const key = ex.originalName || ex.name;
+    const sets = [];
+    for(let s=0;s<ex.effectiveSets;s++){
+      sets.push({
+        w: document.getElementById(`w-${ei}-${s}`)?.value || '',
+        r: document.getElementById(`r-${ei}-${s}`)?.value || ''
+      });
+    }
+    snap[key] = {sets, rir:_currentRIR[ei]};
+  });
+  return snap;
+}
+function restoreSessionInputs(snap){
+  _activeSession.exercises.forEach((ex,ei)=>{
+    const key = ex.originalName || ex.name;
+    const saved = snap[key];
+    if(!saved) return;
+    saved.sets.forEach((set,s)=>{
+      const wEl = document.getElementById(`w-${ei}-${s}`);
+      const rEl = document.getElementById(`r-${ei}-${s}`);
+      if(wEl && set.w) wEl.value = set.w;
+      if(rEl && set.r) rEl.value = set.r;
+    });
+    if(saved.rir!==undefined) setRIR(ei, saved.rir);
+  });
+}
+function rerenderSessionExercises(){
+  const snap = snapshotSessionInputs();
+  _activeSession = getSetsForSession(_activeSessionName, _activeWeek);
+  renderSessionExerciseList();
+  restoreSessionInputs(snap);
+}
+function removeExerciseInSession(ei){
+  const ex = _activeSession.exercises[ei];
+  if(!confirm(`Remove ${ex.name} from today's session?`)) return;
+  removeExerciseToday(_activeSessionName, ex);
+  rerenderSessionExercises();
+  toast(ex.name + ' removed');
+}
+
 
 function togglePrehab(el){
   const done = el.dataset.done === 'true';
@@ -1064,7 +1496,7 @@ function saveSession(){
       totalSets++;
     }
     if(!sets.length) return;
-    exercises.push({name:ex.name, sets});
+    exercises.push({name:ex.name, sets, slot: slotOf(ex)});
 
     // Save weight for progression - use last working set
     const lastSet = sets[sets.length-1];
@@ -1090,9 +1522,12 @@ function saveSession(){
     bpSession: sessionName,
     bpWeek: weekNum,
     bpDeload: isDeloadWeek(weekNum),
+    bpShort: !!_activeSession.isShort,
+    bpReturn: !!_activeSession.returnStep,
   });
   save(s);
   advanceRotation();
+  bumpReturnMode();
 
   const dur = Math.round((Date.now()-_sessionStart)/60000);
 
@@ -1103,6 +1538,8 @@ function saveSession(){
   document.getElementById('sum-vol').textContent = Math.round(totalVol).toLocaleString();
   document.getElementById('sum-dur').textContent = dur;
 
+  const covEl = document.getElementById('sum-coverage');
+  if(covEl) covEl.innerHTML = coverageHtml(coverageFor(sessionName, !!_activeSession.isShort, exercises), !!_activeSession.isShort);
   const progNote = document.getElementById('prog-note');
   const progList = document.getElementById('sum-progressions');
   if(progressions.length){
@@ -1132,6 +1569,7 @@ function closeSummary(){
 // PROGRESS TAB
 // ════════════════════════════════════════════════════════════════
 function renderProgress(){
+  renderTally();
   const weekNum = getWeekNum();
   const totalWeeks = 24;
   const pct = Math.min(100, Math.round((weekNum-1)/totalWeeks*100));

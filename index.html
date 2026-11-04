@@ -738,6 +738,12 @@ canvas{width:100%!important;}
     </div>
   </div>
 
+  <div id="floor-home" style="margin:10px 16px 0"></div>
+  <div id="tonight-home" style="margin:10px 16px 0;display:none"></div>
+  <div id="logmode-home" style="margin:10px 16px 0"></div>
+  <div id="drinks-home" style="margin:10px 16px 0"></div>
+  <div id="weigh-home" style="margin:10px 16px 0"></div>
+
   <div style="padding:14px 16px 0">
     <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.4px;font-weight:700;margin-bottom:9px">Quick Access</div>
     <div id="app-launcher" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
@@ -1448,6 +1454,8 @@ let S={
   meals:{},bodyweight:[],water:{},
   savedMeals:[],
   alcohol:{},
+  settings:{},
+  prep:null,
   mobility:{},
   dayQuality:{},
   goals:{calories:1900,protein:170,carbs:150,fat:60,fibre:30,water:3800,bodyweight:85},
@@ -2504,25 +2512,32 @@ function deleteCoachNote(id){
 }
 
 function rbw(){
-  const bw=[...(S.bodyweight||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  const ser=bwTrend();
   const c=cx('cs-bw');
-  if(!c||bw.length<2)return;
+  if(!c||ser.length<2)return;
   const goal=S.goals&&S.goals.bodyweight?parseFloat(S.goals.bodyweight):null;
   const datasets=[{
-    label:'Weight',
-    data:bw.map(e=>e.weight),
-    borderColor:'var(--accent)',
-    backgroundColor:'rgba(200,241,53,.08)',
-    borderWidth:2,
+    label:'Weigh-ins',
+    data:ser.map(e=>Math.round(e.raw*10)/10),
+    borderColor:'rgba(200,241,53,.0)',
+    backgroundColor:'rgba(200,241,53,.0)',
+    showLine:false,
     pointRadius:3,
-    pointBackgroundColor:'var(--accent)',
+    pointBackgroundColor:'rgba(150,160,190,.7)',
+  },{
+    label:'Trend',
+    data:ser.map(e=>e.trend),
+    borderColor:'#c8f135',
+    backgroundColor:'rgba(200,241,53,.08)',
+    borderWidth:2.5,
+    pointRadius:0,
     tension:0.3,
     fill:true,
   }];
   if(goal){
     datasets.push({
       label:'Goal',
-      data:bw.map(()=>goal),
+      data:ser.map(()=>goal),
       borderColor:'rgba(77,166,255,.4)',
       borderWidth:1,
       borderDash:[4,4],
@@ -2535,7 +2550,7 @@ function rbw(){
     x:{ticks:{color:'#2d3248',font:{size:9},maxTicksLimit:6},grid:{color:'#181d2d'}},
     y:{ticks:{color:'#2d3248',font:{size:9},callback:v=>v+'kg'},grid:{color:'#181d2d'},beginAtZero:false},
   };
-  new Chart(c,{type:'line',data:{labels:bw.map(e=>fd(e.date)),datasets},options:opts});
+  new Chart(c,{type:'line',data:{labels:ser.map(e=>fd(e.date)),datasets},options:opts});
 }
 
 function renderBodyPage(){
@@ -3257,6 +3272,17 @@ function renderHomeInsight(){
   if(!el||!icon||!text)return;
 
   let msg=null,ico='💡';
+  if(logMode()==='minimal'){
+    // Only protein, drinks and movement are tracked in this mode, so no calorie talk.
+    const drk=drinksOn(d);
+    if(T.prot===0&&hour>=11)msg="Protein is the only food number that counts right now. Tap +30g after each protein hit.";
+    else if(T.prot>0&&protGoal&&(protGoal-T.prot)>30&&hour>=14)msg="You are "+Math.round(protGoal-T.prot)+"g short on protein. A shake or a chicken breast would close the gap.";
+    else if(drk>STD_DAY_GUIDE)msg="That is "+Math.round(drk*10)/10+" standard drinks today, over the 4 a day guideline.";
+    else if(T.prot>=protGoal*0.9&&drk===0)msg="Protein on target, no drinks. Solid day.";
+    ico='💪';
+    if(msg){el.style.display='block';icon.textContent=ico;text.textContent=msg;}else{el.style.display='none';}
+    return;
+  }
 
   // Priority order: problems first, then achievements, then nudges
   if(meals.length===0 && hour>=10){
@@ -3328,6 +3354,7 @@ function rh(){
   }
   checkBadges();
   renderMacroBars();
+  renderHomeCards();
   renderRecoveryScore();
   renderNudges();
   renderMobilityHome();
@@ -3866,7 +3893,7 @@ function getDayStatus(d){
   const water=S.water[d]||0;
   const sleepEntry=(S.sleep||[]).find(e=>e.date===d);
   const alc=S.alcohol[d];
-  const drinks=(alc&&alc.drinks)||0;
+  const drinks=drinksOn(d);
   const isPast=d<td();
   const floor=earliestDataDate();
 
@@ -3879,6 +3906,17 @@ function getDayStatus(d){
   const totalProtein=meals.reduce((a,m)=>a+m.protein,0);
   const calPct=S.goals.calories?totalCal/S.goals.calories:1;
   const proPct=S.goals.protein?totalProtein/S.goals.protein:1;
+
+  // Minimal days (protein + drinks only): calories are not judged, because
+  // unlogged food must never read as a bad day.
+  if(isMinimalDay(d)){
+    let mtag;
+    if(drinks>=3)mtag='bad_booze';
+    else if(drinks>=2)mtag='bad';
+    else if(drinks===0&&totalProtein>0&&proPct>=0.85)mtag='good';
+    else mtag='moderate';
+    return {tag:mtag, source:'auto', minimal:true, proPct, drinks, totalProtein, hasWater:water>0, hasSleep:!!sleepEntry};
+  }
 
   let tag;
   if(drinks>=2&&(calPct>1.15||calPct<0.7))tag='bad_booze';
@@ -3910,14 +3948,16 @@ function renderLast5Days(){
     const label=i===0?'Today':i===1?'Yesterday':fd(d);
     const water=S.water[d]||0;
     const sleepEntry=(S.sleep||[]).find(e=>e.date===d);
-    const alc=S.alcohol[d];
+    const dr=drinksOn(d);
     let stats='';
     if(st.tag!=='gap'&&st.tag!=='none'){
-      stats+=`<span>${st.totalCal||0} kcal (${Math.round((st.calPct||0)*100)}%)</span><span>${Math.round(st.totalProtein||0)}g protein</span>`;
+      if(st.minimal)stats+=`<span>${Math.round(st.totalProtein||0)}g protein (quick log)</span>`;
+      else stats+=`<span>${st.totalCal||0} kcal (${Math.round((st.calPct||0)*100)}%)</span><span>${Math.round(st.totalProtein||0)}g protein</span>`;
     }
     if(water)stats+=`<span>💧 ${water}ml</span>`;
     if(sleepEntry)stats+=`<span>😴 ${sleepEntry.hours}h</span>`;
-    if(alc&&alc.drinks)stats+=`<span>🍺 ${alc.drinks}</span>`;
+    if(dr>0)stats+=`<span>🍺 ${Math.round(dr*10)/10} std</span>`;
+    else if(isAFDay(d))stats+=`<span>🌿 alcohol-free</span>`;
     if(!stats)stats='<span>Nothing logged</span>';
     html+=`<div class="dcard" onclick="openDayDetail('${d}')">
       <div class="dcard-top">
@@ -3979,10 +4019,13 @@ function openDayDetail(d){
   const meals=S.meals[d]||[];
   const water=S.water[d]||0;
   const sleepEntry=(S.sleep||[]).find(e=>e.date===d);
-  const alc=S.alcohol[d];
+  const dr=drinksOn(d);
 
   let bd='';
-  if(meals.length){
+  if(meals.length&&meals.every(m=>m.quick||m.type==='Alcohol')&&meals.some(m=>m.quick)){
+    const pro=meals.reduce((a,m)=>a+m.protein,0);
+    bd+=`<div class="dd-row"><span class="dd-label">Food</span><span class="dd-val">Quick log · ${Math.round(pro)}g protein</span></div>`;
+  }else if(meals.length){
     const cal=meals.reduce((a,m)=>a+m.calories,0), pro=meals.reduce((a,m)=>a+m.protein,0);
     bd+=`<div class="dd-row"><span class="dd-label">Food</span><span class="dd-val">${meals.length} meal${meals.length!==1?'s':''} · ${cal} kcal · ${Math.round(pro)}g protein</span></div>`;
   }else{
@@ -3998,8 +4041,13 @@ function openDayDetail(d){
   }else{
     bd+=`<div class="dd-row"><span class="dd-label">Sleep</span><span class="dd-val" style="color:var(--orange)">⚠️ Not logged</span></div><div class="dd-fix"><input type="number" step="0.5" id="dd-sleep-input" placeholder="hours, e.g. 7.5"><button onclick="saveRetroSleep()">Save</button></div>`;
   }
-  if(alc){
-    bd+=`<div class="dd-row"><span class="dd-label">Alcohol</span><span class="dd-val">${alc.af?'Alcohol-free':alc.drinks+' drink'+(alc.drinks!==1?'s':'')}</span></div>`;
+  if(dr>0){
+    const k=alcKcalOn(d);
+    bd+=`<div class="dd-row"><span class="dd-label">Alcohol</span><span class="dd-val">${Math.round(dr*10)/10} std · ${k} kcal</span></div>`;
+  }else if(isAFDay(d)){
+    bd+=`<div class="dd-row"><span class="dd-label">Alcohol</span><span class="dd-val" style="color:var(--green)">Alcohol-free</span></div>`;
+  }else{
+    bd+=`<div class="dd-row"><span class="dd-label">Alcohol</span><span class="dd-val" style="color:var(--text3)">Nothing recorded</span></div><div class="dd-fix"><button onclick="markAF('${d}')">Mark alcohol-free</button></div>`;
   }
   document.getElementById('dd-breakdown').innerHTML=bd;
 
@@ -4909,38 +4957,59 @@ function calcStreak(){
 // ═══════════════════════════════════════════════
 
 
+// Real drink data lives in meals (type 'Alcohol', written by drinks.html with a
+// std-drinks value). S.alcohol[date].af is only the explicit "alcohol-free" tap.
+const STD_WEEK_GUIDE=10, STD_DAY_GUIDE=4; // NHMRC 2020 guideline: no more than 10 a week, 4 on any day
+const p2=n=>String(n).padStart(2,'0');
+const dstr=dt=>dt.getFullYear()+'-'+p2(dt.getMonth()+1)+'-'+p2(dt.getDate());
+function daysAgo(n){const dt=new Date();dt.setDate(dt.getDate()-n);return dstr(dt);}
+function drinksOn(d){return (S.meals[d]||[]).filter(m=>m.type==='Alcohol').reduce((a,m)=>a+(m.std||1),0);}
+function alcKcalOn(d){return (S.meals[d]||[]).filter(m=>m.type==='Alcohol').reduce((a,m)=>a+(m.calories||0),0);}
+// A day counts as alcohol-free when nothing was drunk AND either you tapped
+// "alcohol-free", or it is a past day on which you logged food. Today needs the
+// explicit tap, so the streak never claims a day that is still in progress.
+// A day you tagged "bad + drinks" in Review never counts.
+function isAFDay(d){
+  if(drinksOn(d)>0)return false;
+  if(S.dayQuality&&S.dayQuality[d]&&S.dayQuality[d].tag==='bad_booze')return false;
+  const a=S.alcohol&&S.alcohol[d];
+  if(a&&a.af)return true;
+  if(d===td())return false;
+  return (S.meals[d]||[]).length>0;
+}
 function calcAFStreak(){
-  // Count consecutive AF days going back from yesterday (today may not be logged yet)
   let streak=0;
-  const dt=new Date();
-  dt.setDate(dt.getDate()-1); // start from yesterday
-  for(let i=0;i<365;i++){
-    const ds=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-    const log=S.alcohol[ds];
-    if(log&&log.af){streak++;dt.setDate(dt.getDate()-1);}
-    else break;
+  for(let i=1;i<365;i++){
+    if(isAFDay(daysAgo(i)))streak++;else break;
   }
-  // Also count today if logged AF
-  const todayLog=S.alcohol[td()];
-  if(todayLog&&todayLog.af)streak++;
+  if(isAFDay(td()))streak++;
   return streak;
 }
-
-function calcAFStreak(){
-  // Count consecutive AF days going back from yesterday (today may not be logged yet)
-  let streak=0;
-  const dt=new Date();
-  dt.setDate(dt.getDate()-1); // start from yesterday
-  for(let i=0;i<365;i++){
-    const ds=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-    const log=S.alcohol[ds];
-    if(log&&log.af){streak++;dt.setDate(dt.getDate()-1);}
-    else break;
+function weekAlcohol(){
+  let std=0,kcal=0,af=0,elapsed=0;
+  for(let i=0;i<7;i++){
+    const d=daysAgo(i);
+    std+=drinksOn(d);kcal+=alcKcalOn(d);
+    if(i>0||isAFDay(d)||drinksOn(d)>0)elapsed++;
+    if(isAFDay(d))af++;
   }
-  // Also count today if logged AF
-  const todayLog=S.alcohol[td()];
-  if(todayLog&&todayLog.af)streak++;
-  return streak;
+  return {std:Math.round(std*10)/10,kcal,af,elapsed};
+}
+function markAF(d){
+  d=d||td();
+  if(drinksOn(d)>0){toast("Drinks are logged for that day");return;}
+  if(!S.alcohol)S.alcohol={};
+  S.alcohol[d]={af:true};
+  sv();
+  toast("Marked alcohol-free");
+  if(typeof ddCurrentDate!=="undefined"&&ddCurrentDate===d&&document.getElementById("m-day-detail")&&document.getElementById("m-day-detail").classList.contains("open")){openDayDetail(d);}
+  renderDrinksHome();
+  if(typeof renderLast5Days==="function"&&document.getElementById("review-5day"))renderLast5Days();
+}
+function unmarkAF(d){
+  d=d||td();
+  if(S.alcohol&&S.alcohol[d]){delete S.alcohol[d];sv();}
+  renderDrinksHome();
 }
 
 function calcMobilityStreak(){
@@ -4980,25 +5049,370 @@ function renderMobilityHome(){
   }
 }
 
-function renderAFHome(){
-  const el=document.getElementById('af-home');
-  const badge=document.getElementById('af-streak-badge');
-  if(!el||!badge)return;
+function renderDrinksHome(){
+  const el=document.getElementById('drinks-home');
+  if(!el)return;
+  const t=td();
+  const w=weekAlcohol();
   const streak=calcAFStreak();
-  const todayLog=S.alcohol[td()];
-  const hasAnyLog=Object.keys(S.alcohol).length>0;
-  if(!hasAnyLog){el.style.display='none';return;}
-  el.style.display='block';
-  if(streak>=2){
-    badge.innerHTML=`<div class="af-streak">🌿 ${streak} day alcohol free streak</div>`;
-  } else if(streak===1){
-    badge.innerHTML=`<div class="af-streak">🌿 Alcohol free today</div>`;
-  } else if(todayLog&&!todayLog.af){
-    badge.innerHTML=`<div style="font-size:11px;color:var(--text3)">${todayLog.drinks} standard drink${todayLog.drinks!==1?'s':''} today</div>`;
-  } else {
-    badge.innerHTML='';
-  }
+  const todayStd=Math.round(drinksOn(t)*10)/10;
+  const todayAF=isAFDay(t);
+  const goalKcal=S.goals&&S.goals.calories?S.goals.calories:2000;
+  const overWeek=w.std>STD_WEEK_GUIDE;
+  const dayEquiv=goalKcal?(w.kcal/goalKcal):0;
+  let todayLine;
+  if(todayStd>0)todayLine=`<span style="color:var(--orange)">${todayStd} std today · ${alcKcalOn(t)} kcal${todayStd>STD_DAY_GUIDE?' · over the 4-a-day guideline':''}</span>`;
+  else if(todayAF)todayLine=`<span style="color:var(--green)">Alcohol-free today</span>`;
+  else todayLine=`<span style="color:var(--text3)">Nothing recorded today</span>`;
+  const afBtn=todayStd>0?'':(todayAF
+    ?`<button onclick="unmarkAF()" style="flex:1;padding:10px;border-radius:var(--rs);border:1px solid var(--green);background:rgba(0,230,118,.1);color:var(--green);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🌿 Alcohol-free ✓ (tap to undo)</button>`
+    :`<button onclick="markAF()" style="flex:1;padding:10px;border-radius:var(--rs);border:1px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">🌿 Alcohol-free today</button>`);
+  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Drinks · last 7 days</span><span>${streak>=1?`🌿 ${streak} day${streak!==1?'s':''} AF streak`:'no AF streak yet'}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:8px">
+      <div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:${overWeek?'var(--red)':'var(--text)'}">${w.std}</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">std / ${STD_WEEK_GUIDE} guide</div></div>
+      <div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:var(--accent)">${w.kcal}</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">kcal</div></div>
+      <div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:var(--green)">${w.af}/${w.elapsed}</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">AF days</div></div>
+    </div>
+    ${w.kcal>0?`<div style="font-size:10.5px;color:var(--text3);margin-bottom:8px">That is about ${dayEquiv.toFixed(1)} days of your ${goalKcal} kcal target spent on drinks.</div>`:''}
+    <div style="font-size:11px;margin-bottom:10px">${todayLine}</div>
+    <div style="display:flex;gap:8px">${afBtn}<a href="drinks.html" style="flex:1;text-decoration:none;text-align:center;padding:10px;border-radius:var(--rs);border:1px solid var(--border2);color:var(--text);font-size:11px;font-weight:700">🍺 Log a drink</a></div>
+  </div>`;
 }
+
+// ═══════════════════════════════════════════════
+// SETTINGS / LOGGING MODE
+// ═══════════════════════════════════════════════
+function cfg(){
+  if(!S.settings)S.settings={};
+  const c=S.settings;
+  if(!c.logMode)c.logMode='full';
+  if(!c.gymWake)c.gymWake='05:45';
+  if(!c.sleepNeed)c.sleepNeed=8;
+  if(!c.minimalRanges)c.minimalRanges=[];
+  return c;
+}
+function logMode(){return cfg().logMode;}
+// A day is judged on protein + drinks only when it falls inside a period you
+// had minimal logging switched on, or when it holds nothing but quick-protein
+// and drink entries.
+function isMinimalDay(d){
+  const meals=S.meals[d]||[];
+  if(meals.length&&meals.some(m=>m.quick)&&meals.every(m=>m.quick||m.type==='Alcohol'))return true;
+  return cfg().minimalRanges.some(r=>d>=r.from&&(!r.to||d<r.to));
+}
+function setLogMode(mode){
+  const c=cfg();
+  if(c.logMode===mode)return;
+  c.logMode=mode;
+  const open=c.minimalRanges.find(r=>!r.to);
+  if(mode==='minimal'){
+    if(!open)c.minimalRanges.push({from:td(),to:null});
+  }else if(open){
+    // today stays judged the way it was lived; the range ends tomorrow
+    const dt=new Date();dt.setDate(dt.getDate()+1);open.to=dstr(dt);
+  }
+  sv();rh();
+  toast(mode==='minimal'?"Protein + drinks only. Unlogged food will not count against you.":"Full logging");
+}
+function quickProtein(g){
+  if(!g||g<=0||g>300){toast("Enter grams of protein");return;}
+  const d=td();
+  if(!S.meals[d])S.meals[d]=[];
+  const n=new Date();
+  S.meals[d].push({id:Date.now(),type:'Snack',time:p2(n.getHours())+':'+p2(n.getMinutes()),description:'Protein (quick log)',calories:0,protein:g,carbs:0,fat:0,fibre:0,quick:true});
+  sv();rh();
+  toast("+"+g+"g protein");
+}
+function quickProteinCustom(){
+  const el=document.getElementById('qp-in');
+  const g=parseFloat(el&&el.value);
+  quickProtein(g);
+  if(el)el.value='';
+}
+function undoQuickProtein(){
+  const d=td();
+  const list=S.meals[d]||[];
+  for(let i=list.length-1;i>=0;i--){
+    if(list[i].quick){const g=list[i].protein;list.splice(i,1);sv();rh();toast("Removed "+g+"g");return;}
+  }
+  toast("No quick entries today");
+}
+function renderLogModeHome(){
+  const el=document.getElementById('logmode-home');
+  if(!el)return;
+  const minimal=logMode()==='minimal';
+  const seg=(m,label)=>`<button onclick="setLogMode('${m}')" style="flex:1;padding:8px 6px;border-radius:8px;border:1px solid ${(minimal?'minimal':'full')===m?'var(--accent)':'var(--border)'};background:${(minimal?'minimal':'full')===m?'rgba(200,241,53,.1)':'transparent'};color:${(minimal?'minimal':'full')===m?'var(--accent)':'var(--text3)'};font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer">${label}</button>`;
+  let body='';
+  if(minimal){
+    const d=td();
+    const prot=Math.round((S.meals[d]||[]).reduce((a,m)=>a+m.protein,0));
+    const goal=S.goals&&S.goals.protein?S.goals.protein:170;
+    const pct=Math.min(100,Math.round(prot/goal*100));
+    body=`<div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:5px"><span>Protein today</span><span style="font-family:'JetBrains Mono',monospace">${prot} / ${goal}g</span></div>
+      <div style="height:6px;border-radius:3px;background:var(--bg3)"><div style="height:6px;border-radius:3px;width:${pct}%;background:var(--blue)"></div></div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        ${[20,30,40].map(g=>`<button onclick="quickProtein(${g})" style="flex:1;padding:9px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--text);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">+${g}g</button>`).join('')}
+        <input id="qp-in" type="number" inputmode="numeric" placeholder="g" style="width:52px;padding:8px 6px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;text-align:center">
+        <button onclick="quickProteinCustom()" style="padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--text);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">Add</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span style="font-size:10px;color:var(--text3)">Drinks are logged separately. Days are judged on protein and drinks only.</span>
+        <span onclick="undoQuickProtein()" style="font-size:10px;color:var(--text3);text-decoration:underline;cursor:pointer;flex-shrink:0;margin-left:8px">Undo last</span>
+      </div>
+    </div>`;
+  }
+  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px">Logging mode</div>
+    <div style="display:flex;gap:6px">${seg('full','Full food log')}${seg('minimal','Protein + drinks only')}</div>
+    ${body}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// WEEKLY SESSION FLOOR  (same rules as Blueprint)
+// ═══════════════════════════════════════════════
+const WEEK_FLOOR=3, WEEK_BONUS=4;
+const PPL_ORDER=['Push A','Pull A','Legs A','Push B','Pull B','Legs B'];
+function weekBoundsHub(){
+  const n=new Date();
+  const dow=(n.getDay()+6)%7; // Monday = 0
+  const st=new Date(n.getFullYear(),n.getMonth(),n.getDate()-dow);
+  const en=new Date(st.getFullYear(),st.getMonth(),st.getDate()+6);
+  return {start:dstr(st),end:dstr(en),dow};
+}
+function weekSessionCount(){
+  const b=weekBoundsHub();
+  const days=new Set((S.workouts||[]).filter(w=>w.type==='strength'&&w.date>=b.start&&w.date<=b.end).map(w=>w.date));
+  return days.size;
+}
+function bpNextSession(){
+  try{
+    const w=JSON.parse(localStorage.getItem('bp_weights')||'{}');
+    if(w._meta&&w._meta.splitVersion==='ppl-v1')return PPL_ORDER[w._meta.rotationPosition%PPL_ORDER.length];
+  }catch(e){}
+  return null;
+}
+function renderFloorHome(){
+  const el=document.getElementById('floor-home');
+  if(!el)return;
+  const done=weekSessionCount();
+  const b=weekBoundsHub();
+  const daysLeft=7-b.dow;
+  let dots='';
+  for(let i=1;i<=WEEK_BONUS;i++){
+    const on=i<=done,bonus=i===WEEK_BONUS;
+    dots+=`<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;margin-right:6px;font-size:12px;font-weight:800;border:2px ${bonus?'dashed':'solid'} ${on?'var(--accent)':'var(--border2)'};background:${on?'var(--accent)':'transparent'};color:${on?'#0a0f07':'var(--text3)'}">${on?'✓':(bonus?'+':i)}</span>`;
+  }
+  let msg;
+  if(done>=WEEK_BONUS)msg="Bonus session done. Anything extra is recovery.";
+  else if(done>=WEEK_FLOOR)msg="Floor hit. A 4th session is a bonus, not an obligation.";
+  else{
+    const need=WEEK_FLOOR-done;
+    if(need>daysLeft)msg=need+" to go with "+daysLeft+" day"+(daysLeft===1?"":"s")+" left. Floor is out of reach this week, so do what you can and reset Monday.";
+    else if(need===daysLeft)msg=need+" to go and "+daysLeft+" day"+(daysLeft===1?"":"s")+" left. Every remaining day counts, and the 30-min version counts.";
+    else msg=need+" more to hit the floor, "+daysLeft+" day"+(daysLeft===1?"":"s")+" left.";
+  }
+  const next=bpNextSession();
+  el.innerHTML=`<a href="blueprint.html" style="text-decoration:none;display:block"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Training this week · ${done} of ${WEEK_FLOOR}</span>${next?`<span style="color:var(--gold)">Next: ${next} →</span>`:''}</div>
+    <div style="display:flex;align-items:center">${dots}</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">${msg}</div>
+  </div></a>`;
+}
+
+// ═══════════════════════════════════════════════
+// TONIGHT: GYM-MORNING PREP + BEDTIME
+// ═══════════════════════════════════════════════
+const PREP_ITEMS=[['alarm','Alarm set'],['bag','Gym bag packed'],['clothes','Clothes out'],['nodrink','No drinks tonight']];
+function getPrep(){
+  if(!S.prep||S.prep.date!==td())S.prep={date:td(),done:{},hidden:false};
+  return S.prep;
+}
+function mins(hhmm){const a=(hhmm||"05:45").split(":").map(Number);return (a[0]||0)*60+(a[1]||0);}
+function hhmm(m){m=((m%1440)+1440)%1440;return p2(Math.floor(m/60))+":"+p2(m%60);}
+function bedtimes(){
+  const c=cfg();
+  const lightsOut=mins(c.gymWake)-Math.round(c.sleepNeed*60);
+  return {lightsOut:hhmm(lightsOut),windDown:hhmm(lightsOut-30),wake:hhmm(mins(c.gymWake))};
+}
+function setGymWake(v){
+  if(!v)return;
+  cfg().gymWake=v;sv();renderTonightHome();
+}
+function prepToggle(k){
+  const p=getPrep();
+  if(k==='nodrink'&&drinksOn(td())>0){toast("Drinks are already logged tonight");return;}
+  p.done[k]=!p.done[k];sv();renderTonightHome();
+}
+function prepHide(){getPrep().hidden=true;sv();renderTonightHome();}
+function renderTonightHome(){
+  const el=document.getElementById('tonight-home');
+  if(!el)return;
+  const now=new Date();
+  const done=weekSessionCount();
+  const dow=now.getDay(); // Sunday = 0; tomorrow is a work day Sun to Thu
+  const p=getPrep();
+  const show=now.getHours()>=16&&!p.hidden&&done<WEEK_BONUS&&(dow<=4||done<WEEK_FLOOR);
+  if(!show){el.style.display='none';el.innerHTML='';return;}
+  const bt=bedtimes();
+  const next=bpNextSession();
+  const drank=drinksOn(td())>0;
+  const rows=PREP_ITEMS.map(([k,label])=>{
+    let on=!!p.done[k];
+    let text=label;
+    let color='var(--text)';
+    if(k==='alarm')text="Alarm set for "+bt.wake;
+    if(k==='nodrink'){
+      if(drank){on=false;text="Drinks logged tonight ("+(Math.round(drinksOn(td())*10)/10)+" std). Reset tomorrow.";color='var(--red)';}
+    }
+    return `<div onclick="prepToggle('${k}')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);cursor:pointer"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;border:2px solid ${on?'var(--accent)':(drank&&k==='nodrink'?'var(--red)':'var(--border2)')};background:${on?'var(--accent)':'transparent'};color:#0a0f07;font-size:12px;font-weight:800;flex-shrink:0">${on?'✓':''}</span><span style="font-size:12px;color:${color}">${text}</span></div>`;
+  }).join('');
+  const readyCount=PREP_ITEMS.filter(([k])=>k==='nodrink'?(!drank&&p.done[k]):p.done[k]).length;
+  el.style.display='block';
+  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Tonight · gym morning prep</span><span onclick="prepHide()" style="cursor:pointer;padding:0 4px">✕</span></div>
+    <div style="font-size:12px;color:var(--text);margin-bottom:8px">${next?`Tomorrow: <strong style="color:var(--gold)">${next}</strong>. Short ~30 min version is one tap in Blueprint.`:'Tomorrow: your next Blueprint session.'}</div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-bottom:6px">
+      <span>Wake</span><input type="time" value="${cfg().gymWake}" onchange="setGymWake(this.value)" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:4px 6px;font-size:12px">
+      <span>→ wind down <strong>${bt.windDown}</strong>, lights out <strong>${bt.lightsOut}</strong></span>
+    </div>
+    ${rows}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span style="font-size:10.5px;color:var(--text3)">${readyCount} of ${PREP_ITEMS.length} ready</span>
+      <span onclick="downloadBedtimeICS()" style="font-size:10.5px;color:var(--blue);text-decoration:underline;cursor:pointer">Add bedtime reminder to calendar</span>
+    </div>
+  </div>`;
+}
+// A phone web app cannot fire a notification once it is closed, so the
+// reminder is a calendar event with alarms, which the phone will ring on its own.
+function downloadBedtimeICS(){
+  const bt=bedtimes();
+  const now=new Date();
+  const stamp=now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate());
+  const wm=mins(bt.windDown);
+  const em=wm+30;
+  const dt=(h)=>stamp+"T"+p2(Math.floor(((h%1440)+1440)%1440/60))+p2(((h%1440)+1440)%1440%60)+"00";
+  const ics=[
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Health Kick//Bedtime//EN","CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT","UID:hk-bedtime@healthkick","DTSTAMP:"+stamp+"T000000Z",
+    "DTSTART:"+dt(wm),"DTEND:"+dt(em),
+    "RRULE:FREQ=WEEKLY;BYDAY=SU,MO,TU,WE,TH",
+    "SUMMARY:Wind down. Lights out "+bt.lightsOut+" (up "+bt.wake+")",
+    "DESCRIPTION:Phone away, gym bag and clothes ready. Lights out at "+bt.lightsOut+" for a "+bt.wake+" wake.",
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Wind down now","TRIGGER:PT0M","END:VALARM",
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Lights out","TRIGGER;RELATED=START:PT30M","END:VALARM",
+    "END:VEVENT","END:VCALENDAR"
+  ].join("\r\n");
+  try{
+    const blob=new Blob([ics],{type:"text/calendar"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="healthkick-bedtime.ics";
+    document.body.appendChild(a);a.click();a.remove();
+    toast("Open the file to add it to your calendar");
+  }catch(e){toast("Could not create the calendar file");}
+  return ics;
+}
+
+// ═══════════════════════════════════════════════
+// DAILY WEIGH-IN + TREND
+// ═══════════════════════════════════════════════
+// One value per day (mean if several), then a time-aware exponential average
+// with a 4 day half-life, so gaps do not distort it and daily water noise is smoothed.
+function bwDaily(){
+  const m={};
+  (S.bodyweight||[]).forEach(b=>{(m[b.date]=m[b.date]||[]).push(b.weight);});
+  return Object.keys(m).sort().map(d=>({date:d,raw:m[d].reduce((a,b)=>a+b,0)/m[d].length}));
+}
+function bwTrend(){
+  const days=bwDaily();
+  let prev=null,prevT=null;
+  return days.map(e=>{
+    const t=new Date(e.date+'T12:00:00').getTime();
+    if(prev===null){prev=e.raw;}
+    else{
+      const gap=(t-prevT)/86400000;
+      const a=1-Math.pow(0.5,gap/4);
+      prev=prev+a*(e.raw-prev);
+    }
+    prevT=t;
+    return {date:e.date,raw:e.raw,trend:Math.round(prev*100)/100};
+  });
+}
+function bwRatePerWeek(series){
+  if(series.length<2)return null;
+  const last=series[series.length-1];
+  const lt=new Date(last.date+'T12:00:00').getTime();
+  let ref=null;
+  for(let i=series.length-2;i>=0;i--){
+    const age=(lt-new Date(series[i].date+'T12:00:00').getTime())/86400000;
+    if(age>=7){ref=series[i];break;}
+    ref=series[i];
+  }
+  const span=(lt-new Date(ref.date+'T12:00:00').getTime())/86400000;
+  if(span<3)return null;
+  return (last.trend-ref.trend)/span*7;
+}
+function quickWeigh(){
+  const el=document.getElementById('qw-in');
+  const w=parseFloat(el&&el.value);
+  if(!w||isNaN(w)||w<30||w>250){toast("Enter a valid weight");return;}
+  const t=td();
+  const ex=S.bodyweight.find(b=>b.date===t);
+  if(ex)ex.weight=w;
+  else S.bodyweight.push({id:Date.now(),weight:w,date:t,notes:'Morning'});
+  S.bodyweight.sort((a,b)=>b.date.localeCompare(a.date));
+  sv();rh();if(typeof rbo==='function')rbo();
+  toast("Weigh-in saved");
+}
+function renderWeighHome(){
+  const el=document.getElementById('weigh-home');
+  if(!el)return;
+  const t=td();
+  const series=bwTrend();
+  const today=(S.bodyweight||[]).find(b=>b.date===t);
+  const rate=bwRatePerWeek(series);
+  const goal=S.goals&&S.goals.bodyweight?parseFloat(S.goals.bodyweight):null;
+  const last=series.length?series[series.length-1]:null;
+  let rateHtml='';
+  if(rate!==null){
+    const towards=goal&&last?((last.trend>goal&&rate<0)||(last.trend<goal&&rate>0)):null;
+    const col=towards===null?'var(--text2)':(towards?'var(--green)':'var(--orange)');
+    rateHtml=`<span style="color:${col};font-family:'JetBrains Mono',monospace">${rate>0?'▲':'▼'} ${Math.abs(rate).toFixed(2)} kg/week</span>`;
+  }
+  // sparkline of the last 28 days
+  let spark='';
+  const pts=series.filter(e=>e.date>=daysAgo(27));
+  if(pts.length>=2){
+    const vals=pts.flatMap(e=>[e.raw,e.trend]);
+    const mn=Math.min(...vals),mx=Math.max(...vals),rng=(mx-mn)||1;
+    const W=300,H=46,pad=4;
+    const t0=new Date(pts[0].date+'T12:00:00').getTime(),t1=new Date(pts[pts.length-1].date+'T12:00:00').getTime(),tr=(t1-t0)||1;
+    const X=e=>pad+((new Date(e.date+'T12:00:00').getTime()-t0)/tr)*(W-2*pad);
+    const Y=v=>H-pad-((v-mn)/rng)*(H-2*pad);
+    const line=pts.map((e,i)=>(i?'L':'M')+X(e).toFixed(1)+' '+Y(e.trend).toFixed(1)).join(' ');
+    const dots=pts.map(e=>`<circle cx="${X(e).toFixed(1)}" cy="${Y(e.raw).toFixed(1)}" r="2" fill="var(--text3)" opacity=".7"/>`).join('');
+    spark=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:46px;margin-top:8px">${dots}<path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  const entry=today
+    ?`<div style="font-size:12px;color:var(--text2)">Today <strong style="font-family:'JetBrains Mono',monospace;color:var(--text)">${today.weight} kg</strong> <span onclick="editBw(${today.id})" style="color:var(--text3);text-decoration:underline;cursor:pointer;margin-left:6px;font-size:10px">edit</span></div>`
+    :`<div style="display:flex;gap:8px;align-items:center"><input id="qw-in" type="number" step="0.1" inputmode="decimal" placeholder="Morning weight, kg" style="flex:1;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px"><button onclick="quickWeigh()" style="padding:9px 14px;border-radius:8px;border:none;background:var(--accent);color:#0a0f07;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">Weigh in</button></div>`;
+  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px">
+    <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Weigh-in</span><span>${last?`Trend ${last.trend.toFixed(1)} kg`:''}</span></div>
+    ${entry}
+    ${last&&rateHtml?`<div style="font-size:11px;margin-top:8px">${rateHtml}<span style="color:var(--text3)"> over the last week or so</span></div>`:(series.length<2?'<div style="font-size:10.5px;color:var(--text3);margin-top:8px">A trend appears after a few weigh-ins. Same time each morning gives the cleanest line.</div>':'')}
+    ${spark}
+  </div>`;
+}
+
+function renderHomeCards(){
+  [renderFloorHome,renderTonightHome,renderLogModeHome,renderDrinksHome,renderWeighHome].forEach(f=>{
+    try{f();}catch(e){console.error(f.name,e);}
+  });
+}
+
+
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
