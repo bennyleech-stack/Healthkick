@@ -143,6 +143,9 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
     <button class="dnav" onclick="navDay(1)">&#8250;</button>
   </div>
 
+  <!-- WEEK + AF STREAK -->
+  <div id="week-card" style="margin:0 18px 10px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs)"></div>
+
   <!-- STICK FIGURE CARD -->
   <div class="figure-card">
     <div class="figure-wrap">
@@ -210,23 +213,6 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
   </div>
 </div>
 
-<!-- CONFIRM SHEET -->
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeSheet()">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-icon" id="sh-icon"></div>
-    <div class="sh-name" id="sh-name"></div>
-    <div class="sh-sub" id="sh-sub"></div>
-    <div class="sh-grid">
-      <div class="sh-m"><div class="sh-mv" id="sh-cal" style="color:var(--accent)"></div><div class="sh-ml">kcal</div></div>
-      <div class="sh-m"><div class="sh-mv" id="sh-carb" style="color:var(--amber)"></div><div class="sh-ml">carbs</div></div>
-      <div class="sh-m"><div class="sh-mv" id="sh-std" style="color:var(--text2)"></div><div class="sh-ml">std drinks</div></div>
-    </div>
-    <button class="conf-btn" onclick="confirmLog()">Log Drink</button>
-    <button class="cancel-btn" onclick="closeSheet()">Cancel</button>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -281,13 +267,14 @@ function getAlcohol(date){
 function logDrink(drink){
   const s=load();
   if(!s.meals)s.meals={};
-  const d=td();
+  const d=vd();
   if(!s.meals[d])s.meals[d]=[];
   const now=new Date();
+  const id=Date.now();
   s.meals[d].push({
-    id:Date.now(),
+    id:id,
     type:'Alcohol',
-    time:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),
+    time:isToday()?String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'):'',
     description:drink.icon+' '+drink.name,
     calories:drink.cal,
     protein:0,
@@ -296,8 +283,24 @@ function logDrink(drink){
     fibre:0,
     std:drink.std,
   });
+  // a logged drink overrides any "alcohol-free" tap for that day
+  if(s.alcohol&&s.alcohol[d])delete s.alcohol[d];
   save(s);
   render();
+  _lastLogged={date:d,id:id};
+  toastUndo(drink.icon+' '+drink.name+' · '+drink.cal+' kcal · '+drink.std+' std');
+}
+let _lastLogged=null;
+function undoLast(){
+  if(!_lastLogged)return;
+  const s=load();
+  const l=_lastLogged;
+  if(s.meals&&s.meals[l.date]){
+    s.meals[l.date]=s.meals[l.date].filter(m=>m.id!==l.id);
+    save(s);render();
+  }
+  _lastLogged=null;
+  toast('Removed');
 }
 
 function deleteDrink(date,id){
@@ -448,24 +451,8 @@ function navDay(d){
   render();
 }
 
-// ── Confirm sheet ─────────────────────────────────────────────
-function openConfirm(drink){
-  _pending=drink;
-  document.getElementById('sh-icon').textContent=drink.icon;
-  document.getElementById('sh-name').textContent=drink.name;
-  document.getElementById('sh-sub').textContent=drink.sub+' · Will log as Alcohol';
-  document.getElementById('sh-cal').textContent=drink.cal+' kcal';
-  document.getElementById('sh-carb').textContent=drink.carbs+'g';
-  document.getElementById('sh-std').textContent=drink.std;
-  document.getElementById('overlay').classList.add('show');
-}
-function closeSheet(){_pending=null;document.getElementById('overlay').classList.remove('show');}
-function confirmLog(){
-  if(!_pending)return;
-  logDrink(_pending);
-  closeSheet();
-  toast(_pending.icon+' '+_pending.name+' logged');
-}
+// ── One tap logs the drink; the toast offers Undo ─────────────
+function openConfirm(drink){logDrink(drink);}
 
 // ── Render drink grids ────────────────────────────────────────
 function renderGrid(containerId, drinks){
@@ -498,6 +485,7 @@ function render(){
   document.getElementById('stat-items').textContent=drinks.length;
 
   updateFigure(totalStd);
+  renderWeek();
 
   // Logged list
   const lEl=document.getElementById('logged-list');
@@ -515,8 +503,75 @@ function render(){
   }
 }
 
+// ── Alcohol-free + weekly totals (same rules as the hub) ──────
+const STD_WEEK_GUIDE=10, STD_DAY_GUIDE=4;
+function dstr(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+function daysAgo(n){const dt=new Date();dt.setDate(dt.getDate()-n);return dstr(dt);}
+function drinkMeals(s,d){return((s.meals&&s.meals[d])||[]).filter(m=>m.type==='Alcohol');}
+function isAF(s,d){
+  if(drinkMeals(s,d).length)return false;
+  if(s.dayQuality&&s.dayQuality[d]&&s.dayQuality[d].tag==='bad_booze')return false;
+  if(s.alcohol&&s.alcohol[d]&&s.alcohol[d].af)return true;
+  if(d===td())return false;
+  return((s.meals&&s.meals[d])||[]).length>0;
+}
+function afStreak(s){
+  let n=0;
+  for(let i=1;i<365;i++){if(isAF(s,daysAgo(i)))n++;else break;}
+  if(isAF(s,td()))n++;
+  return n;
+}
+function toggleAF(){
+  const s=load(),d=vd();
+  if(drinkMeals(s,d).length){toast('Drinks are logged for this day');return;}
+  if(!s.alcohol)s.alcohol={};
+  if(s.alcohol[d]&&s.alcohol[d].af)delete s.alcohol[d];
+  else s.alcohol[d]={af:true};
+  save(s);render();
+}
+function renderWeek(){
+  const s=load();
+  let std=0,kcal=0,af=0,elapsed=0;
+  for(let i=0;i<7;i++){
+    const d=daysAgo(i),dm=drinkMeals(s,d);
+    std+=dm.reduce((a,m)=>a+(m.std||1),0);
+    kcal+=dm.reduce((a,m)=>a+(m.calories||0),0);
+    const a=isAF(s,d);
+    if(a)af++;
+    if(i>0||a||dm.length)elapsed++;
+  }
+  std=Math.round(std*10)/10;
+  const streak=afStreak(s);
+  const d=vd(),dayAF=isAF(s,d),hasDrinks=drinkMeals(s,d).length>0;
+  const goal=(s.goals&&s.goals.calories)||2000;
+  const over=std>STD_WEEK_GUIDE;
+  document.getElementById('week-card').innerHTML=
+    '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Last 7 days</span><span>'+(streak>0?'&#x1F33F; '+streak+' day'+(streak!==1?'s':'')+' alcohol-free streak':'no streak yet')+'</span></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">'+
+      '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;color:'+(over?'var(--red)':'var(--text)')+'">'+std+'</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">std / '+STD_WEEK_GUIDE+' guide</div></div>'+
+      '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;color:var(--accent)">'+kcal+'</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">kcal</div></div>'+
+      '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;color:var(--green)">'+af+'/'+elapsed+'</div><div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:700">AF days</div></div>'+
+    '</div>'+
+    (kcal>0?'<div style="font-size:10.5px;color:var(--text3);margin-top:8px">About '+(kcal/goal).toFixed(1)+' days of your '+goal+' kcal target.</div>':'')+
+    (hasDrinks?'':'<button onclick="toggleAF()" style="width:100%;margin-top:10px;padding:10px;border-radius:var(--rs);border:1px solid var(--green);background:'+(dayAF?'rgba(0,230,118,.12)':'transparent')+';color:var(--green);font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">&#x1F33F; '+(dayAF?'Alcohol-free ✓ (tap to undo)':'Mark '+(isToday()?'today':'this day')+' alcohol-free')+'</button>');
+}
+
 // ── Toast ─────────────────────────────────────────────────────
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200);}
+function toastUndo(m){
+  const t=document.getElementById('toast');
+  t.innerHTML='';
+  t.appendChild(document.createTextNode(m+'  '));
+  const u=document.createElement('u');
+  u.textContent='Undo';
+  u.style.cursor='pointer';
+  u.onclick=function(){undoLast();};
+  t.appendChild(u);
+  t.style.pointerEvents='auto';
+  t.classList.add('on');
+  clearTimeout(window._tt);
+  window._tt=setTimeout(function(){t.classList.remove('on');t.style.pointerEvents='';},4000);
+}
 
 // ── Init ──────────────────────────────────────────────────────
 renderGrid('grid-cans', DRINKS.cans);
