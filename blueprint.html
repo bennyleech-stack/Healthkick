@@ -93,6 +93,11 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .ex-remove{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:4px 6px;flex-shrink:0}
 .ex-remove:active{color:var(--red)}
 .add-ex-btn{display:block;width:calc(100% - 32px);margin:10px 16px 14px;padding:11px;border-radius:var(--rs);background:none;border:1px dashed var(--border2);color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.extra-ex-btn{display:block;width:calc(100% - 32px);margin:0 16px 14px;padding:11px;border-radius:var(--rs);background:var(--gold-d);border:1px solid rgba(200,168,75,.4);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.extra-group-btn{padding:10px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.extra-group-btn.on{background:var(--gold-d);border-color:rgba(200,168,75,.4);color:var(--gold)}
+.extra-slot-hdr{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin-bottom:6px}
+.extra-slot-hint{color:var(--text2);text-transform:none;letter-spacing:0;font-weight:500}
 .rot-jump{display:flex;gap:6px;margin:0 16px 12px;overflow-x:auto}
 .rot-jump-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
 .rot-jump-btn.on{background:var(--gold-d);border-color:rgba(200,168,75,.4);color:var(--gold)}
@@ -368,6 +373,20 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
   </div>
 </div>
 
+<!-- EXTRA EXERCISE MODAL — pick from body parts already worked today, mid-session -->
+<div class="overlay" id="extra-overlay" onclick="if(event.target===this)closeExtraModal()">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Add extra</div>
+    <div class="sh-sub" id="extra-sub">Added for today only · pick a body part you've hit today</div>
+    <div id="extra-groups" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+    <div id="extra-slots" style="max-height:320px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button onclick="closeExtraModal()" style="flex:1;padding:13px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -496,8 +515,8 @@ const SLOT_META = {
   vertical_press:    {label:'Shoulder press',        group:'Shoulders'},
   lateral_delt:      {label:'Lateral raise',         group:'Shoulders'},
   rear_delt:         {label:'Rear delt / face pull', group:'Shoulders'},
-  triceps_pushdown:  {label:'Triceps pushdown',      group:'Triceps'},
-  triceps_overhead:  {label:'Triceps overhead',      group:'Triceps'},
+  triceps_pushdown:  {label:'Triceps pushdown',      group:'Triceps', hint:'Elbow stays by your side — biases the lateral (outer) and medial heads'},
+  triceps_overhead:  {label:'Triceps overhead',      group:'Triceps', hint:'Elbow up by your ear — stretches the long (inner) head, the one you feel least from pushdowns'},
   vertical_pull:     {label:'Vertical pull',         group:'Back'},
   row_heavy:         {label:'Heavy row',             group:'Back'},
   row_support:       {label:'Supported row',         group:'Back'},
@@ -1397,7 +1416,68 @@ function renderSessionExerciseList(){
       </div>
     </div>`;
   }).join('');
+  container.innerHTML += `<button class="extra-ex-btn" onclick="openExtraModal()">+ Extra</button>`;
   container.innerHTML += `<button class="add-ex-btn" onclick="openAddModal(true)">+ Add an exercise</button>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXTRA EXERCISE — mid-session only. Narrows the add-exercise flow to
+// body parts actually represented in today's session (by each
+// exercise's slot group), so "extra triceps" only offers triceps slots
+// rather than the full movement-pattern library.
+// ════════════════════════════════════════════════════════════════
+let _extraGroup = null;
+function sessionGroupsWorked(){
+  const groups = [];
+  _activeSession.exercises.forEach(ex=>{
+    const slot = slotOf(ex);
+    const g = slot && SLOT_META[slot] && SLOT_META[slot].group;
+    if(g && g!=='Rehab' && !groups.includes(g)) groups.push(g);
+  });
+  return groups;
+}
+function openExtraModal(){
+  _extraGroup = null;
+  document.getElementById('extra-sub').textContent = "Added for today only · pick a body part you've hit today";
+  document.getElementById('extra-slots').innerHTML = '';
+  renderExtraGroups();
+  document.getElementById('extra-overlay').classList.add('show');
+}
+function closeExtraModal(){
+  document.getElementById('extra-overlay').classList.remove('show');
+  _extraGroup = null;
+}
+function renderExtraGroups(){
+  const groups = sessionGroupsWorked();
+  document.getElementById('extra-groups').innerHTML = groups.map(g=>
+    `<button class="extra-group-btn${g===_extraGroup?' on':''}" onclick="selectExtraGroup('${g}')">${g}</button>`
+  ).join('') || '<div style="font-size:12px;color:var(--text3)">No trackable body parts in this session.</div>';
+}
+function selectExtraGroup(group){
+  _extraGroup = group;
+  renderExtraGroups();
+  const slots = Object.keys(SLOT_META).filter(sl=>SLOT_META[sl].group===group);
+  document.getElementById('extra-sub').textContent = group + ' · tap an exercise to add it';
+  document.getElementById('extra-slots').innerHTML = slots.map(sl=>{
+    const meta = SLOT_META[sl];
+    const opts = (EXERCISE_LIBRARY[sl]||[]).map(o =>
+      `<div class="swap-opt" onclick="addExtraExercise('${sl}','${o.name.replace(/'/g,"\\'")}')">
+        <div class="swap-opt-name">${o.name}</div>
+        <div class="swap-opt-spec">${o.repLow}${o.repLow!==o.repHigh?'–'+o.repHigh:''} reps${o.note?' · '+o.note:''}</div>
+      </div>`
+    ).join('');
+    return `<div style="margin-bottom:14px">
+      <div class="extra-slot-hdr">${meta.label}${meta.hint?` <span class="extra-slot-hint">— ${meta.hint}</span>`:''}</div>
+      ${opts}
+    </div>`;
+  }).join('');
+}
+function addExtraExercise(slotId, name){
+  const exData = (EXERCISE_LIBRARY[slotId]||[]).find(o=>o.name===name) || {name, repLow:8, repHigh:12, inc:2.5};
+  addExerciseToday(_activeSessionName, exData, slotId);
+  rerenderSessionExercises();
+  toast(name + ' added for today');
+  renderExtraGroups();
 }
 
 // Preserve entered weight/reps/RIR across a swap/add/remove mid-session,
