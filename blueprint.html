@@ -98,6 +98,9 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .extra-group-btn.on{background:var(--gold-d);border-color:rgba(200,168,75,.4);color:var(--gold)}
 .extra-slot-hdr{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin-bottom:6px}
 .extra-slot-hint{color:var(--text2);text-transform:none;letter-spacing:0;font-weight:500}
+.cardio-ex-btn{display:block;width:calc(100% - 32px);margin:0 16px 14px;padding:11px;border-radius:var(--rs);background:var(--bg3);border:1px dashed var(--border2);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.cardio-chip{padding:10px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.cardio-chip.on{background:var(--gold-d);border-color:rgba(200,168,75,.4);color:var(--gold)}
 .rot-jump{display:flex;gap:6px;margin:0 16px 12px;overflow-x:auto}
 .rot-jump-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
 .rot-jump-btn.on{background:var(--gold-d);border-color:rgba(200,168,75,.4);color:var(--gold)}
@@ -383,6 +386,28 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
     <div id="extra-slots" style="max-height:320px;overflow-y:auto"></div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button onclick="closeExtraModal()" style="flex:1;padding:13px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARDIO FINISHER MODAL — quick-log treadmill/bike/sprints, saved to the cardio log -->
+<div class="overlay" id="cardio-overlay" onclick="if(event.target===this)closeCardioModal()">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Add cardio</div>
+    <div class="sh-sub">Logged to today's cardio, not this session's sets</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <button class="cardio-chip on" id="cc-Treadmill" onclick="selectCardioType('Treadmill')">Treadmill</button>
+      <button class="cardio-chip" id="cc-Bike" onclick="selectCardioType('Bike')">Bike</button>
+      <button class="cardio-chip" id="cc-Sprints" onclick="selectCardioType('Sprints')">Sprints</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:6px">Duration (min)</label>
+      <input type="number" id="cardio-dur" placeholder="10" inputmode="numeric" style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:11px 13px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeCardioModal()" style="flex:1;padding:13px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">Cancel</button>
+      <button onclick="saveCardioExtra()" style="flex:1;padding:13px;border-radius:var(--rs);background:linear-gradient(135deg,var(--gold),var(--accent));color:#0a0f07;border:none;font-size:13px;font-weight:800;cursor:pointer">Log it</button>
     </div>
   </div>
 </div>
@@ -1417,7 +1442,45 @@ function renderSessionExerciseList(){
     </div>`;
   }).join('');
   container.innerHTML += `<button class="extra-ex-btn" onclick="openExtraModal()">+ Extra</button>`;
+  container.innerHTML += `<button class="cardio-ex-btn" onclick="openCardioModal()">+ Cardio finisher</button>`;
   container.innerHTML += `<button class="add-ex-btn" onclick="openAddModal(true)">+ Add an exercise</button>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// CARDIO FINISHER — mid-session only. Logs a short cardio block
+// (treadmill/bike/sprints) straight to today's cardio log, same
+// store cardio.html and weekly.html read from, rather than mixing
+// it into this session's strength sets/reps.
+// ════════════════════════════════════════════════════════════════
+let _cardioType='Treadmill';
+const CARDIO_TYPE_MAP={Treadmill:{type:'Running',zone:'z2'},Bike:{type:'Cycling',zone:'z2'},Sprints:{type:'HIIT',zone:'interval'}};
+const CARDIO_MET={Running:9,Cycling:7,HIIT:8};
+function openCardioModal(){
+  selectCardioType('Treadmill');
+  document.getElementById('cardio-dur').value='';
+  document.getElementById('cardio-overlay').classList.add('show');
+}
+function closeCardioModal(){
+  document.getElementById('cardio-overlay').classList.remove('show');
+}
+function selectCardioType(t){
+  _cardioType=t;
+  ['Treadmill','Bike','Sprints'].forEach(n=>document.getElementById('cc-'+n).classList.toggle('on',n===t));
+}
+function saveCardioExtra(){
+  const dur=parseInt(document.getElementById('cardio-dur').value)||0;
+  if(!dur){toast('Enter a duration');return;}
+  const s=load();
+  const mapped=CARDIO_TYPE_MAP[_cardioType];
+  const bw=(s.bodyweight&&s.bodyweight[0])?s.bodyweight[0].weight:75;
+  const met=CARDIO_MET[mapped.type]||5;
+  const zMult=mapped.zone==='interval'?1.25:0.85;
+  const cal=Math.round(met*zMult*bw*(dur/60));
+  if(!s.cardio)s.cardio=[];
+  s.cardio.unshift({id:Date.now(),type:mapped.type,zone:mapped.zone,date:td(),duration:dur,distance:0,hr:0,calories:cal,notes:_cardioType+' — workout finisher'});
+  save(s);
+  closeCardioModal();
+  toast(_cardioType+' logged for today');
 }
 
 // ════════════════════════════════════════════════════════════════
