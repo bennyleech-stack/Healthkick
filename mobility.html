@@ -152,7 +152,7 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 const KEY='mobility_v1';
 const td=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 
-const POSES = {"hamstring": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"40\" y2=\"102\"/><line x1=\"40\" y1=\"102\" x2=\"38\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"62\"/><line x1=\"58\" y1=\"66\" x2=\"70\" y2=\"90\"/><line x1=\"70\" y1=\"90\" x2=\"76\" y2=\"108\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"63\" y2=\"93\"/><line x1=\"63\" y1=\"93\" x2=\"78\" y2=\"110\"/></g><circle cx=\"62\" cy=\"55\" r=\"8\" fill=\"#c8a84b\"/>", "quad": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"80\" x2=\"43\" y2=\"100\"/><line x1=\"43\" y1=\"100\" x2=\"42\" y2=\"118\"/><line x1=\"45\" y1=\"80\" x2=\"48\" y2=\"55\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"80\" x2=\"58\" y2=\"85\"/><line x1=\"58\" y1=\"85\" x2=\"50\" y2=\"68\"/><line x1=\"48\" y1=\"58\" x2=\"58\" y2=\"60\"/><line x1=\"58\" y1=\"60\" x2=\"52\" y2=\"68\"/></g><circle cx=\"50\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "calf_gastroc": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"85\" y1=\"30\" x2=\"85\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"65\" y2=\"100\"/><line x1=\"65\" y1=\"100\" x2=\"70\" y2=\"118\"/><line x1=\"60\" y1=\"55\" x2=\"55\" y2=\"85\"/><line x1=\"60\" y1=\"58\" x2=\"82\" y2=\"52\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"35\" y2=\"100\"/><line x1=\"35\" y1=\"100\" x2=\"25\" y2=\"118\"/></g><circle cx=\"58\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "soleus": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"85\" y1=\"30\" x2=\"85\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"65\" y2=\"100\"/><line x1=\"65\" y1=\"100\" x2=\"70\" y2=\"118\"/><line x1=\"60\" y1=\"55\" x2=\"55\" y2=\"85\"/><line x1=\"60\" y1=\"58\" x2=\"82\" y2=\"52\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"40\" y2=\"96\"/><line x1=\"40\" y1=\"96\" x2=\"30\" y2=\"116\"/></g><circle cx=\"58\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "couch": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"38\" y2=\"105\"/><line x1=\"38\" y1=\"105\" x2=\"35\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"48\" y2=\"55\"/><line x1=\"48\" y1=\"60\" x2=\"38\" y2=\"102\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"118\"/><line x1=\"58\" y1=\"118\" x2=\"66\" y2=\"100\"/></g><circle cx=\"50\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "piriformis": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"100\" x2=\"35\" y2=\"110\"/><line x1=\"35\" y1=\"110\" x2=\"25\" y2=\"115\"/><line x1=\"45\" y1=\"100\" x2=\"48\" y2=\"75\"/><line x1=\"48\" y1=\"78\" x2=\"58\" y2=\"95\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"100\" x2=\"60\" y2=\"95\"/><line x1=\"60\" y1=\"95\" x2=\"48\" y2=\"108\"/></g><circle cx=\"50\" cy=\"68\" r=\"8\" fill=\"#c8a84b\"/>", "wrist_ext": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"70\" x2=\"50\" y2=\"42\"/><line x1=\"50\" y1=\"45\" x2=\"80\" y2=\"45\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"80\" y1=\"45\" x2=\"80\" y2=\"62\"/><line x1=\"70\" y1=\"35\" x2=\"80\" y2=\"55\"/></g><circle cx=\"50\" cy=\"34\" r=\"8\" fill=\"#c8a84b\"/>", "wrist_flex": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"70\" x2=\"50\" y2=\"42\"/><line x1=\"50\" y1=\"45\" x2=\"80\" y2=\"45\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"80\" y1=\"45\" x2=\"80\" y2=\"26\"/><line x1=\"88\" y1=\"32\" x2=\"76\" y2=\"45\"/></g><circle cx=\"50\" cy=\"34\" r=\"8\" fill=\"#c8a84b\"/>", "butterfly": "<g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"98\" x2=\"28\" y2=\"104\"/><line x1=\"28\" y1=\"104\" x2=\"47\" y2=\"112\"/><line x1=\"50\" y1=\"98\" x2=\"72\" y2=\"104\"/><line x1=\"72\" y1=\"104\" x2=\"53\" y2=\"112\"/></g><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"98\" x2=\"53\" y2=\"76\"/><line x1=\"53\" y1=\"80\" x2=\"47\" y2=\"110\"/></g><circle cx=\"54\" cy=\"68\" r=\"8\" fill=\"#c8a84b\"/>", "itband": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"43\" y2=\"102\"/><line x1=\"43\" y1=\"102\" x2=\"42\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"38\" y2=\"55\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"100\"/><line x1=\"58\" y1=\"100\" x2=\"65\" y2=\"116\"/><line x1=\"38\" y1=\"58\" x2=\"25\" y2=\"40\"/></g><circle cx=\"36\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "ankle_dorsi": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"82\" y1=\"15\" x2=\"82\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"85\" x2=\"40\" y2=\"102\"/><line x1=\"40\" y1=\"102\" x2=\"35\" y2=\"118\"/><line x1=\"50\" y1=\"85\" x2=\"52\" y2=\"55\"/><line x1=\"52\" y1=\"58\" x2=\"70\" y2=\"50\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"85\" x2=\"58\" y2=\"100\"/><line x1=\"58\" y1=\"100\" x2=\"52\" y2=\"118\"/></g><circle cx=\"54\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "forward_fold": "<line x1=\"20\" y1=\"108\" x2=\"88\" y2=\"108\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#7ed957\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"30\" y1=\"95\" x2=\"82\" y2=\"104\"/></g><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"30\" y1=\"95\" x2=\"46\" y2=\"66\"/><line x1=\"48\" y1=\"70\" x2=\"78\" y2=\"100\"/></g><circle cx=\"48\" cy=\"60\" r=\"8\" fill=\"#c8a84b\"/>", "glute_bridge_hold": "<line x1=\"10\" y1=\"112\" x2=\"90\" y2=\"112\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"18\" y1=\"95\" x2=\"55\" y2=\"70\"/><line x1=\"55\" y1=\"70\" x2=\"70\" y2=\"92\"/><line x1=\"70\" y1=\"92\" x2=\"66\" y2=\"111\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"70\" x2=\"90\" y2=\"62\"/></g><circle cx=\"13\" cy=\"90\" r=\"8\" fill=\"#c8a84b\"/>"};
+const POSES = {"hamstring": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"40\" y2=\"102\"/><line x1=\"40\" y1=\"102\" x2=\"38\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"62\"/><line x1=\"58\" y1=\"66\" x2=\"70\" y2=\"90\"/><line x1=\"70\" y1=\"90\" x2=\"76\" y2=\"108\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"63\" y2=\"93\"/><line x1=\"63\" y1=\"93\" x2=\"78\" y2=\"110\"/></g><circle cx=\"62\" cy=\"55\" r=\"8\" fill=\"#c8a84b\"/>", "quad": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"80\" x2=\"43\" y2=\"100\"/><line x1=\"43\" y1=\"100\" x2=\"42\" y2=\"118\"/><line x1=\"45\" y1=\"80\" x2=\"48\" y2=\"55\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"80\" x2=\"58\" y2=\"85\"/><line x1=\"58\" y1=\"85\" x2=\"50\" y2=\"68\"/><line x1=\"48\" y1=\"58\" x2=\"58\" y2=\"60\"/><line x1=\"58\" y1=\"60\" x2=\"52\" y2=\"68\"/></g><circle cx=\"50\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "calf_gastroc": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"85\" y1=\"30\" x2=\"85\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"65\" y2=\"100\"/><line x1=\"65\" y1=\"100\" x2=\"70\" y2=\"118\"/><line x1=\"60\" y1=\"55\" x2=\"55\" y2=\"85\"/><line x1=\"60\" y1=\"58\" x2=\"82\" y2=\"52\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"35\" y2=\"100\"/><line x1=\"35\" y1=\"100\" x2=\"25\" y2=\"118\"/></g><circle cx=\"58\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "soleus": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"85\" y1=\"30\" x2=\"85\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"65\" y2=\"100\"/><line x1=\"65\" y1=\"100\" x2=\"70\" y2=\"118\"/><line x1=\"60\" y1=\"55\" x2=\"55\" y2=\"85\"/><line x1=\"60\" y1=\"58\" x2=\"82\" y2=\"52\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"85\" x2=\"40\" y2=\"96\"/><line x1=\"40\" y1=\"96\" x2=\"30\" y2=\"116\"/></g><circle cx=\"58\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "couch": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"38\" y2=\"105\"/><line x1=\"38\" y1=\"105\" x2=\"35\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"48\" y2=\"55\"/><line x1=\"48\" y1=\"60\" x2=\"38\" y2=\"102\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"118\"/><line x1=\"58\" y1=\"118\" x2=\"66\" y2=\"100\"/></g><circle cx=\"50\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "piriformis": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"100\" x2=\"35\" y2=\"110\"/><line x1=\"35\" y1=\"110\" x2=\"25\" y2=\"115\"/><line x1=\"45\" y1=\"100\" x2=\"48\" y2=\"75\"/><line x1=\"48\" y1=\"78\" x2=\"58\" y2=\"95\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"100\" x2=\"60\" y2=\"95\"/><line x1=\"60\" y1=\"95\" x2=\"48\" y2=\"108\"/></g><circle cx=\"50\" cy=\"68\" r=\"8\" fill=\"#c8a84b\"/>", "wrist_ext": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"70\" x2=\"50\" y2=\"42\"/><line x1=\"50\" y1=\"45\" x2=\"80\" y2=\"45\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"80\" y1=\"45\" x2=\"80\" y2=\"62\"/><line x1=\"70\" y1=\"35\" x2=\"80\" y2=\"55\"/></g><circle cx=\"50\" cy=\"34\" r=\"8\" fill=\"#c8a84b\"/>", "wrist_flex": "<g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"70\" x2=\"50\" y2=\"42\"/><line x1=\"50\" y1=\"45\" x2=\"80\" y2=\"45\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"80\" y1=\"45\" x2=\"80\" y2=\"26\"/><line x1=\"88\" y1=\"32\" x2=\"76\" y2=\"45\"/></g><circle cx=\"50\" cy=\"34\" r=\"8\" fill=\"#c8a84b\"/>", "butterfly": "<g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"98\" x2=\"28\" y2=\"104\"/><line x1=\"28\" y1=\"104\" x2=\"47\" y2=\"112\"/><line x1=\"50\" y1=\"98\" x2=\"72\" y2=\"104\"/><line x1=\"72\" y1=\"104\" x2=\"53\" y2=\"112\"/></g><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"98\" x2=\"53\" y2=\"76\"/><line x1=\"53\" y1=\"80\" x2=\"47\" y2=\"110\"/></g><circle cx=\"54\" cy=\"68\" r=\"8\" fill=\"#c8a84b\"/>", "itband": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"43\" y2=\"102\"/><line x1=\"43\" y1=\"102\" x2=\"42\" y2=\"118\"/><line x1=\"45\" y1=\"85\" x2=\"38\" y2=\"55\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"45\" y1=\"85\" x2=\"58\" y2=\"100\"/><line x1=\"58\" y1=\"100\" x2=\"65\" y2=\"116\"/><line x1=\"38\" y1=\"58\" x2=\"25\" y2=\"40\"/></g><circle cx=\"36\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "ankle_dorsi": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><line x1=\"82\" y1=\"15\" x2=\"82\" y2=\"122\" stroke=\"#243d1c\" stroke-width=\"4\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"85\" x2=\"40\" y2=\"102\"/><line x1=\"40\" y1=\"102\" x2=\"35\" y2=\"118\"/><line x1=\"50\" y1=\"85\" x2=\"52\" y2=\"55\"/><line x1=\"52\" y1=\"58\" x2=\"70\" y2=\"50\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"85\" x2=\"58\" y2=\"100\"/><line x1=\"58\" y1=\"100\" x2=\"52\" y2=\"118\"/></g><circle cx=\"54\" cy=\"48\" r=\"8\" fill=\"#c8a84b\"/>", "forward_fold": "<line x1=\"20\" y1=\"108\" x2=\"88\" y2=\"108\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#7ed957\" stroke-width=\"7\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"30\" y1=\"95\" x2=\"82\" y2=\"104\"/></g><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"30\" y1=\"95\" x2=\"46\" y2=\"66\"/><line x1=\"48\" y1=\"70\" x2=\"78\" y2=\"100\"/></g><circle cx=\"48\" cy=\"60\" r=\"8\" fill=\"#c8a84b\"/>", "glute_bridge_hold": "<line x1=\"10\" y1=\"112\" x2=\"90\" y2=\"112\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"18\" y1=\"95\" x2=\"55\" y2=\"70\"/><line x1=\"55\" y1=\"70\" x2=\"70\" y2=\"92\"/><line x1=\"70\" y1=\"92\" x2=\"66\" y2=\"111\"/></g><g stroke=\"#7ed957\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"55\" y1=\"70\" x2=\"90\" y2=\"62\"/></g><circle cx=\"13\" cy=\"90\" r=\"8\" fill=\"#c8a84b\"/>", "post_tilt": "<line x1=\"15\" y1=\"118\" x2=\"88\" y2=\"118\" stroke=\"#243d1c\" stroke-width=\"3\" stroke-linecap=\"round\"/><g stroke=\"#c8a84b\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"><line x1=\"50\" y1=\"118\" x2=\"48\" y2=\"88\"/><line x1=\"48\" y1=\"88\" x2=\"52\" y2=\"55\"/></g><g stroke=\"#7ed957\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"><path d=\"M36 86 A16 16 0 0 1 62 82\"/></g><circle cx=\"54\" cy=\"46\" r=\"8\" fill=\"#c8a84b\"/>"};
 
 const POSE_META = {
   hamstring:{name:'Standing Hamstring Stretch', cue:'Front heel down, back mostly straight, hinge from the hips.'},
@@ -167,7 +167,8 @@ const POSE_META = {
   itband:{name:'Standing IT Band / Glute Stretch', cue:'Cross the back leg behind, reach overhead, lean away.'},
   ankle_dorsi:{name:'Ankle Dorsiflexion (Wall) Stretch', cue:'Knee drives over the toes, heel stays flat.'},
   forward_fold:{name:'Seated Forward Fold (both legs)', cue:'Legs extended together, hinge from the hips toward your toes.'},
-  glute_bridge_hold:{name:'Single-Leg Glute Bridge Hold', cue:'Squeeze the glute hard, keep hips level, avoid dipping or rotating.'}
+  glute_bridge_hold:{name:'Single-Leg Glute Bridge Hold', cue:'Squeeze the glute hard, keep hips level, avoid dipping or rotating.'},
+  post_tilt:{name:'Posterior Pelvic Tilt (Standing Tuck)', cue:'Feet hip-width, soft knees. Squeeze your glutes and draw your belly button up and in, tucking your tailbone under. Hold that position — this is your target pelvis alignment.'}
 };
 
 const HOLD=30, TRANS=10;
@@ -187,6 +188,7 @@ function todaysFocus(){
   return { alt: ALTERNATING_POOL[d % ALTERNATING_POOL.length], bi: BILATERAL_POOL[d % BILATERAL_POOL.length] };
 }
 function todaysRoutine(){
+  if(pelvicFixActive()) return PELVIC_FIX_ROUTINE;
   const f=todaysFocus();
   return [
     {pose:'couch', side:'L'},
@@ -197,6 +199,48 @@ function todaysRoutine(){
     {pose:'wrist_ext', side:'B'},
     {pose:'wrist_flex', side:'B'}
   ];
+}
+
+/* ---------- 5-DAY ANTERIOR PELVIC TILT FIX ----------
+   Same daily routine for 5 straight days, on purpose: motor control (the
+   posterior-tilt cue) is learned through repetition, not variety. Order is
+   stretch the tight stuff first (hip flexors, quads), then activate the
+   weak stuff (glutes), then finish with the integration drill that teaches
+   the brain to find and hold a posteriorly-rotated pelvis on demand. */
+const PELVIC_FIX_DAYS=5;
+const PELVIC_FIX_ROUTINE=[
+  {pose:'couch', side:'L'},
+  {pose:'couch', side:'R'},
+  {pose:'quad', side:'L'},
+  {pose:'quad', side:'R'},
+  {pose:'glute_bridge_hold', side:'L'},
+  {pose:'glute_bridge_hold', side:'R'},
+  {pose:'post_tilt', side:'B'}
+];
+function pelvicFixDayNum(){
+  if(!S.pelvicFix) return 0;
+  const start=new Date(S.pelvicFix.start+'T00:00:00');
+  const now=new Date(td()+'T00:00:00');
+  return Math.floor((now-start)/86400000)+1;
+}
+function pelvicFixActive(){
+  if(!S.pelvicFix) return false;
+  const day=pelvicFixDayNum();
+  if(day>=1 && day<=PELVIC_FIX_DAYS) return true;
+  if(day>PELVIC_FIX_DAYS){ S.pelvicFix.justFinished=true; save(S); }
+  return false;
+}
+function startPelvicFix(){
+  S.pelvicFix={start:td()};
+  save(S);
+  toast('5-day pelvic tilt fix started — day 1 of '+PELVIC_FIX_DAYS);
+  renderRoutineIdle();
+}
+function endPelvicFix(){
+  if(!confirm('End the 5-day plan early and go back to your normal routine?')) return;
+  S.pelvicFix=null;
+  save(S);
+  renderRoutineIdle();
 }
 function sideLabel(s){ return s==='L'?'Left side':s==='R'?'Right side':'Both sides'; }
 function poseSvg(id, mirror){
@@ -343,6 +387,8 @@ function setMainTab(t){
 
 function renderRoutineIdle(){
   if(routineState!=='idle'){ renderPlayer(); return; }
+  const fixActive=pelvicFixActive();
+  const justFinished=!fixActive && S.pelvicFix && S.pelvicFix.justFinished;
   const list=todaysRoutine();
   const totalSec = 40*list.length; // 10s intro + 30N + 10(N-1) = 40N
   const mins=Math.floor(totalSec/60), secs=totalSec%60;
@@ -358,11 +404,28 @@ function renderRoutineIdle(){
       </div>
     </div>`;
   });
+
+  let badgeHtml, planHtml='';
+  if(fixActive){
+    const day=pelvicFixDayNum();
+    badgeHtml=`<div class="day-badge"><span class="day-num">Anterior Pelvic Tilt Fix \u2014 Day ${day} of ${PELVIC_FIX_DAYS}</span><span class="day-lbl">hip flexors &amp; quads stretched, glutes activated, tilt drilled</span></div>`;
+    planHtml=`<p style="font-size:10.5px;color:var(--text2);line-height:1.5;margin:8px 16px 0">Same 5 moves every day on purpose \u2014 the posterior tilt cue is learned through repetition. Same time each day helps it stick.</p>
+      <button class="ctrl-btn" style="margin:8px 16px 0;width:calc(100% - 32px)" onclick="endPelvicFix()">End plan early</button>`;
+  } else {
+    if(justFinished){
+      planHtml=`<p style="font-size:11px;color:var(--accent);font-weight:700;margin:12px 16px 0">\u2713 5-day plan complete. Keep the posterior tilt cue in mind during normal training \u2014 restart the plan any time below.</p>`;
+      S.pelvicFix=null; save(S);
+    }
+    badgeHtml=`<div class="day-badge"><span class="day-num">Today's alternating focus: ${todaysFocus().alt==='glute_bridge_hold'?'Glutes':'Ankle'}</span><span class="day-lbl">+ hips &amp; wrists, every day</span></div>`;
+    planHtml+=`<button class="ctrl-btn" style="margin:8px 16px 0;width:calc(100% - 32px);border-color:rgba(200,168,75,.4);color:var(--gold)" onclick="startPelvicFix()">\u{1F3AF} Fix Anterior Pelvic Tilt \u2014 5-Day Plan</button>`;
+  }
+
   document.getElementById('view-routine').innerHTML = `
-    <div class="day-badge"><span class="day-num">Today's alternating focus: ${todaysFocus().alt==='glute_bridge_hold'?'Glutes':'Ankle'}</span><span class="day-lbl">+ hips &amp; wrists, every day</span></div>
+    ${badgeHtml}
     <div class="time-est">${list.length} stretches &middot; \u2248 ${mins}:${String(secs).padStart(2,'0')} total</div>
     <div class="preview-strip">${rows}</div>
     <button class="start-btn" onclick="startRoutine()">Start Routine</button>
+    ${planHtml}
     <button class="ctrl-btn" style="margin:10px 16px 0;width:calc(100% - 32px)" onclick="testSound()">\u{1F50A} Test Sound &amp; Vibration</button>
   `;
 }
