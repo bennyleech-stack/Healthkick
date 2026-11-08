@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#08090c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weekly">
+<link rel="manifest" href="weekly-manifest.json">
+<title>Weekly Round-up · Health Kick</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#08090c;--bg2:#0e1017;--bg3:#141720;--card:#10121a;
+  --border:#1e2230;--border2:#272b3a;
+  --purple:#a78bfa;--purple-d:rgba(167,139,250,.1);
+  --blue:#4da6ff;--blue-d:rgba(77,166,255,.1);
+  --green:#3dd68c;--text:#eef0f6;--text2:#7a8099;--text3:#3d4258;
+  --r:18px;--rs:12px;
+}
+html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;width:100%}
+#app{display:flex;flex-direction:column;position:fixed;inset:0;max-width:430px;margin:0 auto;width:100%}
+.hdr{padding:26px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.hdr-eyebrow{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:5px}
+.hdr-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.hub-link{font-size:10px;color:var(--text3);text-decoration:none;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-weight:600;white-space:nowrap}
+#scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:28px}
+#scroll::-webkit-scrollbar{display:none}
+.sec{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.4px;padding:20px 18px 8px;font-weight:700}
+.card{margin:0 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.card.purple::before{background:linear-gradient(90deg,var(--purple),var(--blue))}
+.card.blue::before{background:linear-gradient(90deg,var(--blue),var(--green))}
+.ir{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ig{margin-bottom:10px}
+.ig label{display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:5px}
+.ig input,.ig select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 11px;font-size:13px;font-family:inherit;outline:none}
+.ig input:focus,.ig select:focus{border-color:rgba(167,139,250,.4)}
+.btn{width:100%;padding:13px;border-radius:var(--rs);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+.btn.primary{background:linear-gradient(135deg,var(--purple),var(--blue));color:#08090c}
+.btn.secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.chip.sel{background:var(--purple-d);border-color:rgba(167,139,250,.5);color:var(--purple)}
+.latest{font-size:11px;color:var(--text2);line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.latest b{color:var(--text)}
+.sess-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.sess-row:last-child{border-bottom:none}
+.sess-left{font-size:12.5px;color:var(--text)}
+.sess-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.sess-dur{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--blue)}
+.empty{font-size:12px;color:var(--text3);padding:4px 0}
+.detail-link{display:block;text-align:center;font-size:11px;color:var(--text3);text-decoration:none;padding:16px 18px 4px}
+.detail-link b{color:var(--purple);font-weight:700}
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-70px);background:var(--card);color:var(--text);border:1px solid var(--border2);padding:9px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(0,0,0,.7);white-space:nowrap}
+.toast.on{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <div class="hdr-eyebrow">Health Kick</div>
+      <div class="hdr-title">🗓️ Weekly Round-up</div>
+    </div>
+    <a href="index.html" class="hub-link">← Hub</a>
+  </div>
+
+  <div id="scroll">
+    <div class="sec">This Week's Cardio</div>
+    <div class="card blue">
+      <div id="cardio-week-list"></div>
+      <div class="chip-row" id="cardio-type-row" style="margin-top:12px">
+        <div class="chip sel" data-type="Running" onclick="selectType(this)">Running</div>
+        <div class="chip" data-type="Cycling" onclick="selectType(this)">Cycling</div>
+        <div class="chip" data-type="Walking" onclick="selectType(this)">Walking</div>
+        <div class="chip" data-type="Swimming" onclick="selectType(this)">Swimming</div>
+        <div class="chip" data-type="Rowing" onclick="selectType(this)">Rowing</div>
+        <div class="chip" data-type="Sport" onclick="selectType(this)">Sport</div>
+        <div class="chip" data-type="Other" onclick="selectType(this)">Other</div>
+      </div>
+      <div class="chip-row" id="cardio-zone-row">
+        <div class="chip sel" data-zone="z2" onclick="selectZone(this)">Zone 2</div>
+        <div class="chip" data-zone="z1" onclick="selectZone(this)">Zone 1 / Easy</div>
+        <div class="chip" data-zone="tempo" onclick="selectZone(this)">Tempo</div>
+        <div class="chip" data-zone="interval" onclick="selectZone(this)">Interval</div>
+      </div>
+      <div class="ir">
+        <div class="ig"><label>Date</label><input type="date" id="cw-date"></div>
+        <div class="ig"><label>Duration (min)</label><input type="number" id="cw-dur" placeholder="30" inputmode="numeric"></div>
+      </div>
+      <div class="ir">
+        <div class="ig"><label>Distance (km)</label><input type="number" id="cw-dist" placeholder="optional" step="0.1" inputmode="decimal"></div>
+        <div class="ig"><label>Notes</label><input type="text" id="cw-notes" placeholder="optional"></div>
+      </div>
+      <button class="btn primary" onclick="saveCardio()">+ Log cardio session</button>
+    </div>
+    <a href="cardio.html" class="detail-link">Need full session detail or history? <b>Open the Cardio log →</b></a>
+
+    <div class="sec">Body Measurements</div>
+    <div class="card purple">
+      <div class="ir">
+        <div class="ig"><label>Chest (cm)</label><input type="number" id="m-chest" placeholder="—" step="0.5"></div>
+        <div class="ig"><label>Waist (cm)</label><input type="number" id="m-waist" placeholder="—" step="0.5"></div>
+      </div>
+      <div class="ir">
+        <div class="ig"><label>Hips (cm)</label><input type="number" id="m-hips" placeholder="—" step="0.5"></div>
+        <div class="ig"><label>Left Arm (cm)</label><input type="number" id="m-larm" placeholder="—" step="0.5"></div>
+      </div>
+      <div class="ir">
+        <div class="ig"><label>Right Arm (cm)</label><input type="number" id="m-rarm" placeholder="—" step="0.5"></div>
+        <div class="ig"><label>Thighs (cm)</label><input type="number" id="m-thigh" placeholder="—" step="0.5"></div>
+      </div>
+      <button class="btn primary" onclick="saveMeasurements()">Save measurements</button>
+      <div class="latest" id="latest-measurements"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='ft6';
+let _type='Running', _zone='z2';
+
+function load(){try{const d=localStorage.getItem(KEY);return d?JSON.parse(d):{cardio:[],measurements:[]};}catch(e){return{cardio:[],measurements:[]};}}
+function save(s){try{const{dd:_a,cm:_b,...c}=s;localStorage.setItem(KEY,JSON.stringify(c));}catch(e){toast('Storage error');}}
+function td(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function fd(d){return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
+function last7(){return Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');});}
+
+const MET={Running:9,Cycling:7,Walking:3.5,Rowing:7,Swimming:8,Sport:7,Other:5};
+function estCal(type,zone,dur,bw){
+  const met=MET[type]||5;
+  const zMult=zone==='z1'?0.7:zone==='z2'?0.85:zone==='tempo'?1.1:zone==='interval'?1.25:1.0;
+  return Math.round(met*zMult*(bw||75)*(dur/60));
+}
+
+function selectType(el){
+  document.querySelectorAll('#cardio-type-row .chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  _type=el.dataset.type;
+}
+function selectZone(el){
+  document.querySelectorAll('#cardio-zone-row .chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  _zone=el.dataset.zone;
+}
+
+function renderCardioWeek(){
+  const s=load();
+  const days=last7();
+  const sessions=(s.cardio||[]).filter(e=>days.includes(e.date)).sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('cardio-week-list');
+  if(!sessions.length){
+    el.innerHTML='<div class="empty">No cardio logged in the last 7 days yet.</div>';
+    return;
+  }
+  const totalMin=sessions.reduce((a,e)=>a+(e.duration||0),0);
+  el.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${sessions.length} session${sessions.length!==1?'s':''} · ${totalMin} min this week</div>` +
+    sessions.map(e=>`<div class="sess-row">
+      <div><div class="sess-left">${e.type}</div><div class="sess-sub">${fd(e.date)}${e.notes?' · '+e.notes:''}</div></div>
+      <div class="sess-dur">${e.duration}min</div>
+    </div>`).join('');
+}
+
+function saveCardio(){
+  const dur=parseInt(document.getElementById('cw-dur').value)||0;
+  if(!dur){toast('Enter a duration');return;}
+  const date=document.getElementById('cw-date').value||td();
+  const dist=parseFloat(document.getElementById('cw-dist').value)||0;
+  const notes=document.getElementById('cw-notes').value.trim();
+  const s=load();
+  const bw=(s.bodyweight&&s.bodyweight[0])?s.bodyweight[0].weight:75;
+  const cal=estCal(_type,_zone,dur,bw);
+  if(!s.cardio)s.cardio=[];
+  s.cardio.unshift({id:Date.now(),type:_type,zone:_zone,date,duration:dur,distance:dist,hr:0,calories:cal,notes});
+  save(s);
+  document.getElementById('cw-dur').value='';
+  document.getElementById('cw-dist').value='';
+  document.getElementById('cw-notes').value='';
+  renderCardioWeek();
+  toast('Cardio session logged ✓');
+}
+
+function saveMeasurements(){
+  const fields={chest:'m-chest',waist:'m-waist',hips:'m-hips',larm:'m-larm',rarm:'m-rarm',thigh:'m-thigh'};
+  const entry={date:td()};
+  let any=false;
+  Object.entries(fields).forEach(([k,id])=>{
+    const v=parseFloat(document.getElementById(id).value);
+    if(v&&!isNaN(v)){entry[k]=v;any=true;}
+  });
+  if(!any){toast('Enter at least one measurement');return;}
+  const s=load();
+  if(!s.measurements)s.measurements=[];
+  const idx=s.measurements.findIndex(m=>m.date===td());
+  if(idx>-1)s.measurements[idx]=entry;else s.measurements.push(entry);
+  save(s);
+  renderLatestMeasurements();
+  toast('Measurements saved ✓');
+}
+
+function renderLatestMeasurements(){
+  const s=load();
+  const el=document.getElementById('latest-measurements');
+  if(!s.measurements||!s.measurements.length){el.innerHTML='';return;}
+  const latest=[...s.measurements].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const labels={chest:'Chest',waist:'Waist',hips:'Hips',larm:'L.Arm',rarm:'R.Arm',thigh:'Thighs'};
+  const parts=Object.entries(labels).filter(([k])=>latest[k]!=null).map(([k,l])=>`<b>${latest[k]}cm</b> ${l}`);
+  el.innerHTML=`Last logged ${fd(latest.date)} — ${parts.join(' · ')}`;
+}
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200);}
+
+document.getElementById('cw-date').value=td();
+renderCardioWeek();
+renderLatestMeasurements();
+</script>
+</body>
+</html>
