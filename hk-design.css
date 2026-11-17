@@ -113,7 +113,9 @@
 .hk-sheet-handle{width:36px;height:4px;background:var(--hk-border-2);border-radius:2px;margin:16px auto 18px}
 
 /* ---- suite bottom nav (injected by hk-nav.js) ---- */
-.hk-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--hk-surface);border-top:1px solid var(--hk-border);padding-bottom:env(safe-area-inset-bottom,0px);z-index:100}
+/* z-index 90: stays below full-screen modal-style views (session
+   logging, etc.), which in this suite use z-index:100+. */
+.hk-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--hk-surface);border-top:1px solid var(--hk-border);padding-bottom:env(safe-area-inset-bottom,0px);z-index:90}
 .hk-nav .hk-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px 8px;min-height:44px;color:var(--hk-text-3);font-size:9.5px;font-weight:700;text-decoration:none;font-family:var(--hk-font-body);background:none;border:none;cursor:pointer}
 .hk-nav .hk-nav-item svg{width:21px;height:21px}
 .hk-nav .hk-nav-item.hk-on{color:var(--hk-accent)}
