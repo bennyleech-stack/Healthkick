@@ -1367,9 +1367,25 @@ function confirmSwap(){
   const slotName = _swapInSession ? _activeSessionName : getTodaySession();
 
   setSwap(slotName, originalName, newExData, makeDefault);
+  seedSwapWeight(originalName, newExData.name);
   closeSwapModal();
   if(_swapInSession) rerenderSessionExercises(); else renderToday();
   toast(makeDefault ? `${newExData.name} is now the default here` : `Swapped to ${newExData.name} for today`);
+}
+
+// Carries over a sensible starting weight when swapping to an exercise that
+// has no bp_weights history of its own yet, so the first logged set isn't a
+// blank guess. Never overwrites real history the new name might already
+// have from an earlier stint using it (e.g. swapping back to something used
+// before).
+function seedSwapWeight(fromName, toName){
+  if(fromName.toLowerCase()===toName.toLowerCase())return;
+  if(getCurrentWeight(toName, getWeekNum()))return;
+  const last = getCurrentWeight(fromName, getWeekNum());
+  if(!last)return;
+  const weights = loadWeights();
+  weights[toName.toLowerCase()] = [{week:last.week, weight:last.weight, reps:last.reps, date:last.date, verdict:'hold', carriedFrom:fromName}];
+  saveWeights(weights);
 }
 
 // ════════════════════════════════════════════════════════════════
