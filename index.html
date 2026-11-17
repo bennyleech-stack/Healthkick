@@ -687,6 +687,10 @@ canvas{width:100%!important;}
     <div id="recovery-score-card"><div style="font-size:10px;color:var(--text3)">Calculating...</div></div>
   </div>
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;position:relative;overflow:hidden;margin:8px 16px 0">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--yellow))"></div>
+    <div id="muscle-recovery-card"><div style="font-size:10px;color:var(--text3)">Calculating...</div></div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;position:relative;overflow:hidden;margin:8px 16px 0">
     <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue))"></div>
     <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between"><span>Nutrition</span><span id="macro-strip-summary" style="color:var(--text3)"></span></div>
     <div id="macro-bars"></div>
@@ -2334,6 +2338,111 @@ function renderMuscleVolume(){
 }
 
 // ═══════════════════════════════════════════════
+// FEATURE: PER-MUSCLE RECOVERY VIEW
+// Separate from the whole-body Recovery Score above and the weekly
+// Muscle Volume tracker — this estimates which individual muscle groups
+// are fresh/recovering/fatigued from how recently and how much they were
+// trained. Exercises logged via Blueprint carry a .slot, which maps
+// precisely onto the same muscle groups Blueprint itself trains by
+// (including the finer Quads/Hams & glutes/Calves split a footballer
+// cares about); exercises logged here without a slot fall back to
+// classifyExercise()'s coarser text match. Advisory only — it never
+// blocks logging a workout, it just informs the decision.
+// ═══════════════════════════════════════════════
+const SLOT_GROUP={
+  flat_press:'Chest', incline_press:'Chest', chest_fly:'Chest',
+  vertical_press:'Shoulders', lateral_delt:'Shoulders', rear_delt:'Shoulders',
+  triceps_pushdown:'Triceps', triceps_overhead:'Triceps',
+  vertical_pull:'Back', row_heavy:'Back', row_support:'Back',
+  biceps_lengthened:'Biceps', biceps_neutral:'Biceps',
+  squat_pattern:'Quads', quad_press:'Quads', lunge_pattern:'Quads', knee_extension:'Quads',
+  hinge_pattern:'Hams & glutes', knee_flexion:'Hams & glutes', hip_extension:'Hams & glutes',
+  calf:'Calves', core:'Core', ankle_prehab:'Rehab', elbow_prehab:'Rehab'
+};
+// Coarse MUSCLE_MAP groups folded onto the finer set above, for exercises
+// with no .slot. 'Legs' has no single obvious finer bucket, so it's
+// approximated as Quads (the most common primary driver); 'Other' is
+// dropped rather than guessed.
+const COARSE_TO_FINE_GROUP={Chest:'Chest',Back:'Back',Shoulders:'Shoulders',Biceps:'Biceps',Triceps:'Triceps',Core:'Core',Legs:'Quads',Other:null};
+const RECOVERY_GROUPS=['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hams & glutes','Calves','Core'];
+
+function groupForLoggedExercise(ex){
+  if(ex.slot && SLOT_GROUP[ex.slot])return SLOT_GROUP[ex.slot];
+  return COARSE_TO_FINE_GROUP[classifyExercise(ex.name)]||null;
+}
+
+function getMuscleRecovery(){
+  const now=new Date();
+  const last7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');});
+
+  const data={};
+  RECOVERY_GROUPS.forEach(g=>data[g]={lastDate:null,recentSets:0});
+
+  S.workouts.forEach(w=>{
+    (w.exercises||[]).forEach(ex=>{
+      const g=groupForLoggedExercise(ex);
+      if(!g||!data[g])return;
+      if(!data[g].lastDate||w.date>data[g].lastDate)data[g].lastDate=w.date;
+      if(last7.includes(w.date))data[g].recentSets+=(ex.sets||[]).length;
+    });
+  });
+
+  // Football/match sessions load the legs too, scaled roughly by intensity.
+  const FOOTBALL_RE=/football|soccer|five-a-side|futsal/i;
+  const INTENSITY_LOAD={Easy:3,Moderate:5,Hard:7,'Max Effort':9};
+  (S.sports||[]).forEach(sp=>{
+    if(!FOOTBALL_RE.test(sp.sport||''))return;
+    const load=INTENSITY_LOAD[sp.intensity]||5;
+    ['Quads','Hams & glutes','Calves'].forEach(g=>{
+      if(!data[g].lastDate||sp.date>data[g].lastDate)data[g].lastDate=sp.date;
+      if(last7.includes(sp.date))data[g].recentSets+=load;
+    });
+  });
+
+  return RECOVERY_GROUPS.map(g=>{
+    const{lastDate,recentSets}=data[g];
+    if(!lastDate)return{group:g,status:'fresh',daysSince:null,recentSets:0};
+    const daysSince=Math.round((now-new Date(lastDate+'T12:00:00'))/(1000*60*60*24));
+    let status;
+    if(daysSince<=0)status='fatigued';
+    else if(daysSince===1)status=recentSets>=8?'fatigued':'recovering';
+    else if(daysSince===2)status='recovering';
+    else status='fresh';
+    return{group:g,status,daysSince,recentSets};
+  });
+}
+
+function renderMuscleRecovery(){
+  const el=document.getElementById('muscle-recovery-card');
+  if(!el)return;
+  const STATUS_META={
+    fatigued:{label:'Fatigued',colour:'var(--orange)',bg:'var(--orange-d)'},
+    recovering:{label:'Recovering',colour:'var(--yellow)',bg:'var(--yellow-d)'},
+    fresh:{label:'Fresh',colour:'var(--green)',bg:'var(--green-d)'}
+  };
+  const order={fatigued:0,recovering:1,fresh:2};
+  const rows=getMuscleRecovery().filter(d=>d.daysSince!==null).sort((a,b)=>order[a.status]-order[b.status]);
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:700">Muscle Recovery</div>
+      <button onclick="openM('m-sport')" style="background:none;border:none;color:var(--text3);font-size:10px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:0">&#9917; log a match</button>
+    </div>
+    ${rows.length?rows.map(d=>{
+      const meta=STATUS_META[d.status];
+      const sub=d.daysSince===0?'trained today':d.daysSince+'d ago';
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11.5px;color:var(--text2)">${d.group}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:9.5px;color:var(--text3)">${sub}</span>
+          <span style="font-size:10px;font-weight:700;color:${meta.colour};background:${meta.bg};border-radius:8px;padding:2px 8px">${meta.label}</span>
+        </span>
+      </div>`;
+    }).join(''):'<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px 0">No muscle groups trained yet.</div>'}
+    <div style="font-size:9.5px;color:var(--text3);margin-top:8px;line-height:1.4">Advisory only — a guide, not a rule, based on recent training volume and days rested.</div>`;
+}
+
+// ═══════════════════════════════════════════════
 // FEATURE 4: BODY COMPOSITION PROGRESS
 // ═══════════════════════════════════════════════
 function renderBodyProgress(){
@@ -3281,6 +3390,7 @@ function rh(){
   renderMacroBars();
   renderHomeCards();
   renderRecoveryScore();
+  renderMuscleRecovery();
   renderNudges();
   renderMobilityHome();
   renderHomeInsight();
