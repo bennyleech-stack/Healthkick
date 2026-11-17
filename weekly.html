@@ -11,15 +11,12 @@
 <link rel="manifest" href="weekly-manifest.json">
 <title>Weekly Round-up · Health Kick</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hk-design.css">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* bg/card/border/text/accent/radius now come from hk-design.css. */
 :root{
-  --bg:#08090c;--bg2:#0e1017;--bg3:#141720;--card:#10121a;
-  --border:#1e2230;--border2:#272b3a;
-  --purple:#a78bfa;--purple-d:rgba(167,139,250,.1);
-  --blue:#4da6ff;--blue-d:rgba(77,166,255,.1);
-  --green:#3dd68c;--text:#eef0f6;--text2:#7a8099;--text3:#3d4258;
-  --r:18px;--rs:12px;
+  --blue:#4da6ff;
 }
 html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;width:100%}
 #app{display:flex;flex-direction:column;position:fixed;inset:0;max-width:430px;margin:0 auto;width:100%}
@@ -38,13 +35,13 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .ig{margin-bottom:10px}
 .ig label{display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:5px}
 .ig input,.ig select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 11px;font-size:13px;font-family:inherit;outline:none}
-.ig input:focus,.ig select:focus{border-color:rgba(167,139,250,.4)}
+.ig input:focus,.ig select:focus{border-color:rgba(61,220,132,.4)}
 .btn{width:100%;padding:13px;border-radius:var(--rs);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
 .btn.primary{background:linear-gradient(135deg,var(--purple),var(--blue));color:#08090c}
 .btn.secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}
 .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
-.chip.sel{background:var(--purple-d);border-color:rgba(167,139,250,.5);color:var(--purple)}
+.chip.sel{background:var(--purple-d);border-color:var(--purple);color:var(--purple)}
 .latest{font-size:11px;color:var(--text2);line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .latest b{color:var(--text)}
 .sess-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
@@ -220,5 +217,6 @@ document.getElementById('cw-date').value=td();
 renderCardioWeek();
 renderLatestMeasurements();
 </script>
+<script src="hk-nav.js"></script>
 </body>
 </html>
