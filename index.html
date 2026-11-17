@@ -1025,6 +1025,16 @@ canvas{width:100%!important;}
     <button class="btn bg bfw" onclick="exportCSV()">⬇ Download Raw Data (CSV)</button>
   </div>
 
+  <div class="sl2">Import</div>
+  <div class="card" style="margin-top:0">
+    <span class="ca" style="background:var(--green)"></span>
+    <div class="ch" style="margin-bottom:8px">Restore from CSV</div>
+    <p style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:12px">Reads a CSV exported here (workouts, meals, cardio, sport, bodyweight, water) and adds whatever this device doesn't already have. Never overwrites a date that already has data, so importing the same file twice is safe.</p>
+    <input type="file" id="import-csv-input" accept=".csv,text/csv" style="display:none" onchange="handleImportCSV(event)">
+    <button class="btn bg bfw" onclick="document.getElementById('import-csv-input').click()">⬆ Import CSV</button>
+    <div id="import-status" style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5"></div>
+  </div>
+
   <div class="sl2">AI Integration</div>
   <div class="card" style="margin-top:0">
     <span class="ca" style="background:var(--accent)"></span>
@@ -1034,7 +1044,7 @@ canvas{width:100%!important;}
     </div>
     <p style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:12px">Powers AI coaching across all Health Kick apps — Food Log, AI Food, and reports here. Stored only on this device.<br><br>Get a key at <strong style="color:var(--text)">console.anthropic.com</strong></p>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:11px 13px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none">
+      <input type="text" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:11px 13px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;-webkit-text-security:disc;text-security:disc">
       <button class="btn bp" onclick="saveAPIKey()" style="padding:11px 16px;white-space:nowrap">Save</button>
     </div>
     <button class="btn bg bfw" onclick="clearAPIKey()" id="api-key-clear" style="display:none;font-size:11px">Remove Key</button>
@@ -5066,6 +5076,208 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='fittrack-export.csv';a.click();
   URL.revokeObjectURL(url);
   toast('Data exported ✓');
+}
+
+// ═══════════════════════════════════════════════
+// IMPORT CSV — the inverse of exportCSV(). Reads a CSV in exactly that
+// shape and merges it into S, never touching a date that already has
+// data of that type, so re-running the same import is always safe.
+// Exercise names are matched against a slot map (the same slot ids
+// Blueprint trains by) so imported workouts feed Strength Score and
+// Muscle Recovery too, with a text-match fallback via classifyExercise
+// for anything that doesn't match.
+// ═══════════════════════════════════════════════
+function parseCSVText(text){
+  const rows=[];
+  let row=[], field='', inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQuotes){
+      if(c==='"'){
+        if(text[i+1]==='"'){ field+='"'; i++; }
+        else inQuotes=false;
+      } else field+=c;
+    } else {
+      if(c==='"') inQuotes=true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\r'){ /* skip, \n (or EOF) ends the row */ }
+      else if(c==='\n'){ row.push(field); field=''; rows.push(row); row=[]; }
+      else field+=c;
+    }
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.length>1 || r[0]!=='');
+}
+
+const IMPORT_SLOT_ALIASES={
+  flat_press:['barbell bench press','bench','bench press','db bench press','dumbbell bench press','pin machine chest press','hammer strength chest press','machine chest press'],
+  incline_press:['incline db press','incline dumbbell press','hammer strength incline press','incline machine press','smith incline press','incline hammer press','incline hammer machine','incline hammer press (machine)'],
+  chest_fly:['pec deck','cable fly','low-to-high cable fly','cable pec fly'],
+  vertical_press:['seated db shoulder press','hammer strength shoulder press','machine shoulder press','arnold press','military press (barbell)','military press','mil press','ohp','overhead press','shoulder press'],
+  lateral_delt:['cable lateral raise','db lateral raise','machine lateral raise','lateral raise','lateral raises (dumbbells)','lat raise','lat raises'],
+  rear_delt:['face pull','reverse pec deck','rear delt cable fly','band pull-apart'],
+  triceps_pushdown:['cable rope pushdown','straight-bar pushdown','triceps extension machine','tricep pulldown','cable pushdowns','cable pushdowns sore elbow','tricep pushdown'],
+  triceps_overhead:['overhead rope extension','overhead db extension','skull crushers','ez bar skulls','ez-bar skullcrusher'],
+  vertical_pull:['lat pulldown (neutral grip)','lat pulldown (wide grip)','lat pulldown','assisted pull-up','pull-up','pullup','chin up'],
+  row_heavy:['barbell row','bent over row','bent-over row','chest-supported row','single-arm db row','t-bar row','hammer strength row'],
+  row_support:['seated cable row','cable row','machine row'],
+  biceps_lengthened:['incline db curl','bayesian cable curl'],
+  biceps_neutral:['hammer curl','hammer curls','cable curl','preacher curl','ez bar curl','ez-bar curl'],
+  squat_pattern:['back squat','front squat','squats','squat','goblet squat'],
+  quad_press:['leg press','leg press with calves 1.5*','hack squat'],
+  lunge_pattern:['bulgarian split squat','walking lunge','reverse lunge','step-up'],
+  knee_extension:['leg extension'],
+  hinge_pattern:['romanian deadlift','romanian','conventional deadlift','trap bar deadlift','good morning','deadlift'],
+  knee_flexion:['seated leg curl','lying leg curl','leg curl'],
+  hip_extension:['hip thrust','cable pull-through'],
+  calf:['standing calf raise','seated calf raise','calf press (leg press)','calf raise'],
+  core:['hanging knee raise','cable crunch'],
+  ankle_prehab:['tibialis raises + ankle circles'],
+  elbow_prehab:['wrist extensor eccentrics']
+};
+const IMPORT_SLOT_BY_NAME={};
+Object.entries(IMPORT_SLOT_ALIASES).forEach(([slot,names])=>{
+  names.forEach(n=>{ IMPORT_SLOT_BY_NAME[n]=slot; });
+});
+function slotForImportedName(name){
+  return IMPORT_SLOT_BY_NAME[(name||'').toLowerCase().trim()] || null;
+}
+function parseImportedWorkoutExercises(str){
+  if(!str) return [];
+  return str.split(' | ').map(part=>{
+    const idx=part.indexOf(':');
+    if(idx<0) return null;
+    const name=part.slice(0,idx).trim();
+    if(!name) return null;
+    const sets=part.slice(idx+1).split('+').map(s=>{
+      const m=s.match(/([\d.]+)kg.(\d+)/);
+      if(!m) return null;
+      return {weight:parseFloat(m[1]), reps:parseInt(m[2],10)};
+    }).filter(Boolean);
+    if(!sets.length) return null;
+    const slot=slotForImportedName(name);
+    return slot ? {name, sets, slot} : {name, sets};
+  }).filter(Boolean);
+}
+function numFromUnit(str){ return parseFloat(str)||0; }
+
+function handleImportCSV(event){
+  const file=event.target.files && event.target.files[0];
+  event.target.value='';
+  if(!file) return;
+  const statusEl=document.getElementById('import-status');
+  if(statusEl) statusEl.textContent='Reading file…';
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const result=importCSVText(reader.result);
+      if(statusEl) statusEl.innerHTML=`Imported: ${result.workouts} workouts, ${result.meals} meal days, ${result.cardio} cardio, ${result.sports} sport, ${result.bodyweight} weigh-ins, ${result.water} water days.`+
+        (result.skippedDates?`<br>Skipped ${result.skippedDates} date(s) that already had data.`:'');
+      sv(); rh();
+      if(typeof renderWorkoutPage==='function') renderWorkoutPage();
+      toast('Import complete ✓');
+    }catch(e){
+      if(statusEl) statusEl.textContent='Import failed: '+e.message;
+      toast('Import failed — check the file is a Health Kick export');
+    }
+  };
+  reader.onerror=()=>{ if(statusEl) statusEl.textContent='Could not read that file.'; };
+  reader.readAsText(file);
+}
+
+function importCSVText(text){
+  const rows=parseCSVText(text);
+  if(!rows.length || rows[0][0]!=='Type') throw new Error('not a recognised export');
+  rows.shift(); // header
+
+  const existingWorkoutKeys=new Set(S.workouts.map(w=>w.date+'|'+w.name));
+  const existingCardioKeys=new Set(S.cardio.map(c=>c.date+'|'+c.type+'|'+c.duration));
+  const existingSportKeys=new Set(S.sports.map(s=>s.date+'|'+s.sport+'|'+s.duration));
+  const existingMealDates=new Set(Object.keys(S.meals||{}).filter(d=>(S.meals[d]||[]).length));
+  const existingBwDates=new Set(S.bodyweight.map(b=>b.date));
+  const mealsToAdd={};
+  let counts={workouts:0, cardio:0, sports:0, bodyweight:0, water:0};
+  let skippedDates=0;
+  let idSeq=Date.now();
+
+  const newWorkouts=[];
+  rows.forEach(r=>{
+    const [type,date,name,v1,v2,v3,v4,v5,notes]=r;
+    if(!type||!date) return;
+    if(type==='Workout'){
+      const key=date+'|'+name;
+      if(existingWorkoutKeys.has(key)){ skippedDates++; return; }
+      const exercises=parseImportedWorkoutExercises(v3);
+      if(!exercises.length) return;
+      const w={id:idSeq++, name, date, exercises, type:'strength'};
+      S.workouts.push(w);
+      newWorkouts.push(w);
+      existingWorkoutKeys.add(key);
+      counts.workouts++;
+    } else if(type==='Cardio'){
+      const key=date+'|'+name+'|'+parseInt(v1,10);
+      if(existingCardioKeys.has(key)) return;
+      S.cardio.push({id:idSeq++, type:name, date, duration:parseInt(v1,10)||0, distance:numFromUnit(v2), calories:parseInt(v3,10)||0, hr:parseInt(v4,10)||0, notes:notes||''});
+      existingCardioKeys.add(key);
+      counts.cardio++;
+    } else if(type==='Sport'){
+      const key=date+'|'+name+'|'+parseInt(v1,10);
+      if(existingSportKeys.has(key)) return;
+      S.sports.push({id:idSeq++, sport:name, date, duration:parseInt(v1,10)||0, intensity:v2||'Moderate', notes:notes||''});
+      existingSportKeys.add(key);
+      counts.sports++;
+    } else if(type==='Meal'){
+      if(existingMealDates.has(date)) return; // whole date already has real entries — leave it alone
+      if(!mealsToAdd[date]) mealsToAdd[date]=[];
+      mealsToAdd[date].push({id:idSeq++, type:notes||'Snack', time:'', description:name, calories:numFromUnit(v1), protein:numFromUnit(v2), carbs:numFromUnit(v3), fat:numFromUnit(v4), fibre:numFromUnit(v5)});
+    } else if(type==='Bodyweight'){
+      if(existingBwDates.has(date)) return;
+      S.bodyweight.push({id:idSeq++, date, weight:numFromUnit(v1), notes:notes||''});
+      existingBwDates.add(date);
+      counts.bodyweight++;
+    } else if(type==='Water'){
+      if(S.water && S.water[date]!==undefined) return;
+      if(!S.water) S.water={};
+      S.water[date]=parseInt(v1,10)||0;
+      counts.water++;
+    }
+  });
+
+  Object.entries(mealsToAdd).forEach(([date,meals])=>{
+    if(!S.meals[date]) S.meals[date]=[];
+    S.meals[date].push(...meals);
+  });
+
+  // Blueprint's own progression suggestions read a SEPARATE localStorage key
+  // (bp_weights), keyed by exercise name, not from S.workouts — so imported
+  // workouts need to backfill it too, or Blueprint would still show "First
+  // time" for every exercise despite having real history. Only the last
+  // working set per exercise per session matters (matching what
+  // saveExerciseResult() would have stored had these been logged live).
+  // `week` is written but never read back by the progression logic, so a
+  // placeholder is fine; de-duped by date+weight+reps so re-imports are safe.
+  if(newWorkouts.length){
+    let bpWeights={};
+    try{ bpWeights=JSON.parse(localStorage.getItem('bp_weights')||'{}'); }catch(e){ bpWeights={}; }
+    newWorkouts.forEach(w=>{
+      w.exercises.forEach(ex=>{
+        if(!ex.sets||!ex.sets.length) return;
+        const lastSet=ex.sets[ex.sets.length-1];
+        if(!lastSet||!lastSet.weight) return;
+        const key=ex.name.toLowerCase();
+        if(!bpWeights[key]) bpWeights[key]=[];
+        const dup=bpWeights[key].some(e=>e.date===w.date&&e.weight===lastSet.weight&&e.reps===lastSet.reps);
+        if(!dup) bpWeights[key].push({week:0, weight:lastSet.weight, reps:lastSet.reps, date:w.date});
+      });
+    });
+    Object.keys(bpWeights).forEach(k=>{
+      bpWeights[k].sort((a,b)=>a.date.localeCompare(b.date));
+      if(bpWeights[k].length>30) bpWeights[k]=bpWeights[k].slice(-30);
+    });
+    localStorage.setItem('bp_weights', JSON.stringify(bpWeights));
+  }
+
+  return {...counts, meals:Object.keys(mealsToAdd).length, skippedDates};
 }
 
 // ═══════════════════════════════════════════════
