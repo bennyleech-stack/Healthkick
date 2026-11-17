@@ -137,6 +137,13 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .skip-btn{background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:underline;padding:0}
 .rule-link{background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:underline;padding:0;margin-left:auto}
 
+/* REST TIMER */
+.rest-banner{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--bg3);border-top:1px solid var(--border)}
+.rest-banner-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+.rest-banner-time{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:var(--accent)}
+.rest-banner-actions{display:flex;gap:6px}
+.rest-adj,.rest-skip{min-height:34px;padding:0 11px;border-radius:7px;border:1px solid var(--border2);background:var(--card);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+
 /* PREHAB CHECK */
 .prehab-card{margin:0 16px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px}
 .prehab-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
@@ -307,6 +314,18 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 
   <div id="log-scroll" style="flex:1;overflow-y:auto;padding:10px 16px 24px">
     <div id="log-exercises"></div>
+  </div>
+
+  <div class="rest-banner" id="rest-banner" style="display:none">
+    <div>
+      <div class="rest-banner-label" id="rest-label">Resting</div>
+      <div class="rest-banner-time" id="rest-time">0:00</div>
+    </div>
+    <div class="rest-banner-actions">
+      <button class="rest-adj" onclick="adjustRest(-15)">−15s</button>
+      <button class="rest-adj" onclick="adjustRest(15)">+15s</button>
+      <button class="rest-skip" onclick="stopRestTimer()">Skip</button>
+    </div>
   </div>
 
   <div class="action-bar">
@@ -941,6 +960,19 @@ function verdictForExercise(sets, ex){
   return worst===0 ? 'drop' : worst===2 ? 'progress' : 'hold';
 }
 
+// Actual per-set reps from the most recent logged session that included this
+// exercise (by name, case-insensitive) — used to prefill each set's rep box
+// with what really happened last time, rather than the static target range.
+function getLastSessionSets(exName){
+  const s = load();
+  const key = exName.toLowerCase();
+  const matches = (s.workouts||[]).filter(w=>(w.exercises||[]).some(e=>e.name.toLowerCase()===key));
+  if(!matches.length) return null;
+  matches.sort((a,b)=>b.date.localeCompare(a.date));
+  const found = matches[0].exercises.find(e=>e.name.toLowerCase()===key);
+  return (found && found.sets) || null;
+}
+
 function saveExerciseResult(exName, weight, reps, weekNum, verdict){
   const weights = loadWeights();
   const key = exName.toLowerCase();
@@ -1426,6 +1458,7 @@ function renderSessionExerciseList(){
     const suggestedWeight = prog ? prog.weight : '';
 
     const weightTag = weightTagHtml(last, prog, ex, ei);
+    const lastSets = getLastSessionSets(ex.name);
 
     const sets = [];
     for(let s=0;s<ex.effectiveSets;s++){
@@ -1433,12 +1466,13 @@ function renderSessionExerciseList(){
       const rateBtns = [['easy','Easy'],['right','Right'],['hard','Hard']].map(([v,label])=>
         `<button class="rate-btn${v===rating?' sel '+v:''}" onclick="setRating(${ei},${s},'${v}')" id="rate-${ei}-${s}-${v}">${label}</button>`
       ).join('');
+      const prefillReps = (lastSets && lastSets[s] && lastSets[s].reps) || ex.repLow;
       sets.push(`<tr class="set-row">
         <td class="set-num-cell">${s+1}</td>
         <td><input class="set-inp" type="number" step="0.5" inputmode="decimal"
           value="${suggestedWeight}" id="w-${ei}-${s}" placeholder="kg"></td>
         <td><input class="set-inp" type="number" inputmode="numeric"
-          value="${ex.repLow}" id="r-${ei}-${s}" placeholder="reps"></td>
+          value="${prefillReps}" id="r-${ei}-${s}" placeholder="reps"></td>
       </tr>
       <tr class="rate-tr"><td colspan="3"><div class="rate-row">${rateBtns}</div></td></tr>`);
     }
@@ -1629,6 +1663,68 @@ function setRating(ei, s, rating){
     if(btn) btn.classList.toggle('sel', v===rating);
     if(btn) btn.classList.toggle(v, v===rating);
   });
+  // Rating a set is the natural "I just finished this set" signal — start the rest clock.
+  const ex = _activeSession && _activeSession.exercises[ei];
+  if(ex) startRestTimer(parseRestSeconds(ex.rest), ex.name);
+}
+
+// ════════════════════════════════════════════════════════════════
+// REST TIMER — auto-starts when a set is rated, using the exercise's
+// authored rest window as a sensible default. Adjustable, never blocking.
+// ════════════════════════════════════════════════════════════════
+let _restTimer = null;
+function parseRestSeconds(restStr){
+  if(!restStr || restStr==='—') return null;
+  const nums = (restStr.match(/[\d.]+/g)||[]).map(Number);
+  if(!nums.length) return null;
+  const avg = nums.reduce((a,b)=>a+b,0)/nums.length;
+  return Math.round(avg * (/min/i.test(restStr) ? 60 : 1));
+}
+function startRestTimer(seconds, label){
+  if(!seconds) return;
+  if(_restTimer) clearInterval(_restTimer.intervalId);
+  _restTimer = {endsAt: Date.now() + seconds*1000, intervalId: null};
+  const labelEl = document.getElementById('rest-label');
+  if(labelEl) labelEl.textContent = 'Resting — ' + label;
+  const banner = document.getElementById('rest-banner');
+  if(banner) banner.style.display = 'flex';
+  tickRestTimer();
+  _restTimer.intervalId = setInterval(tickRestTimer, 250);
+}
+function tickRestTimer(){
+  if(!_restTimer) return;
+  const remain = Math.max(0, Math.round((_restTimer.endsAt - Date.now())/1000));
+  const timeEl = document.getElementById('rest-time');
+  if(timeEl) timeEl.textContent = Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0');
+  if(remain<=0) restTimerDone();
+}
+function restTimerDone(){
+  if(!_restTimer) return;
+  clearInterval(_restTimer.intervalId);
+  _restTimer = null;
+  if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.5);
+    osc.start(); osc.stop(ctx.currentTime+0.5);
+  }catch(e){}
+  const labelEl = document.getElementById('rest-label');
+  if(labelEl) labelEl.textContent = 'Rest done';
+  setTimeout(()=>{ const b=document.getElementById('rest-banner'); if(b && !_restTimer) b.style.display='none'; }, 2500);
+}
+function stopRestTimer(){
+  if(_restTimer){ clearInterval(_restTimer.intervalId); _restTimer=null; }
+  const banner = document.getElementById('rest-banner');
+  if(banner) banner.style.display = 'none';
+}
+function adjustRest(delta){
+  if(!_restTimer) return;
+  _restTimer.endsAt += delta*1000;
+  tickRestTimer();
 }
 
 function showRatingRule(){
@@ -1646,6 +1742,7 @@ function skipExercise(ei){
 }
 
 function cancelLog(){
+  stopRestTimer();
   document.getElementById('view-log').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 }
