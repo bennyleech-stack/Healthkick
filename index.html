@@ -651,6 +651,11 @@ canvas{width:100%!important;}
     </div>
   </div>
 
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;margin:12px 16px 0">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue))"></div>
+    <div id="strength-score-card"><div style="font-size:10px;color:var(--text3)">Calculating...</div></div>
+  </div>
+
   <div id="nudge-strip" style="display:none;padding:10px 16px 0"></div>
   <div id="home-insight" style="display:none;margin:8px 16px 0;padding:10px 12px;background:linear-gradient(135deg,rgba(77,166,255,.06),rgba(200,241,53,.04));border:1px solid var(--border);border-radius:10px;border-left:2px solid var(--accent)">
     <div style="display:flex;align-items:flex-start;gap:8px">
@@ -2654,6 +2659,95 @@ function checkWorkoutPRs(exercises, existingPRs){
   return newPRs;
 }
 
+// ═══════════════════════════════════════════════
+// STRENGTH SCORE — one number from estimated 1RMs (Epley) on a small
+// fixed basket of key lifts, one per major pattern, normalised to
+// bodyweight. Read live from s.workouts (via each exercise's .slot,
+// the same slot ids Blueprint trains by — swap-resilient, since it
+// doesn't care which named exercise currently fills that slot) and
+// S.bodyweight. No new persisted history blob: the trend line is
+// recomputed from existing data every time, so there's nothing to
+// migrate and nothing that can drift out of sync with the real log.
+// ═══════════════════════════════════════════════
+const STRENGTH_SLOTS={squat:'squat_pattern', hinge:'hinge_pattern', press:'flat_press', pull:'row_heavy'};
+
+function currentE1RMForSlot(slot, asOfDate){
+  const matches=S.workouts.filter(w=>w.date<=asOfDate && (w.exercises||[]).some(ex=>ex.slot===slot));
+  if(!matches.length)return null;
+  matches.sort((a,b)=>b.date.localeCompare(a.date));
+  const w=matches[0];
+  const ex=w.exercises.find(e=>e.slot===slot);
+  let best=0;
+  (ex.sets||[]).forEach(s=>{if(s.weight&&s.reps)best=Math.max(best,get1RM(s.weight,s.reps));});
+  return best>0?{e1rm:best,date:w.date,name:ex.name}:null;
+}
+function bodyweightAsOf(asOfDate){
+  // S.bodyweight is not guaranteed sorted, so never trust [0] as "latest" —
+  // sort explicitly, then take the most recent entry on/before asOfDate.
+  const sorted=[...(S.bodyweight||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  if(!sorted.length)return null;
+  let candidate=null;
+  sorted.forEach(e=>{if(e.date<=asOfDate)candidate=e;});
+  return candidate?candidate.weight:sorted[0].weight;
+}
+function strengthScoreAsOf(asOfDate){
+  const bw=bodyweightAsOf(asOfDate);
+  if(!bw)return null;
+  let total=0;
+  const lifts={};
+  Object.entries(STRENGTH_SLOTS).forEach(([pattern,slot])=>{
+    const r=currentE1RMForSlot(slot,asOfDate);
+    if(r){total+=r.e1rm;lifts[pattern]=r;}
+  });
+  const found=Object.keys(lifts).length;
+  if(!found)return null;
+  return{score:Math.round((total/bw)*100)/100, lifts, bw, liftsFound:found};
+}
+function getStrengthTrend(weeks){
+  const pts=[];
+  for(let i=weeks-1;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i*7);
+    const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const r=strengthScoreAsOf(iso);
+    pts.push({date:iso,score:r?r.score:null});
+  }
+  return pts;
+}
+function renderStrengthScore(){
+  const el=document.getElementById('strength-score-card');
+  if(!el)return;
+  const current=strengthScoreAsOf(td());
+  if(!current){
+    el.innerHTML=`<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:4px">Strength Score</div>
+      <div style="font-size:11.5px;color:var(--text3);line-height:1.5">Log a squat, hinge, press and pull in Blueprint to get your first score.</div>`;
+    return;
+  }
+  const LIFT_LABEL={squat:'Squat',hinge:'Hinge',press:'Press',pull:'Pull'};
+  const pts=getStrengthTrend(8).filter(p=>p.score!==null);
+  let spark='';
+  if(pts.length>=2){
+    const vals=pts.map(p=>p.score);
+    const mn=Math.min(...vals),mx=Math.max(...vals),rng=(mx-mn)||1;
+    const W=300,H=40,pad=4;
+    const X=i=>pad+(i/(pts.length-1))*(W-2*pad);
+    const Y=v=>H-pad-((v-mn)/rng)*(H-2*pad);
+    const line=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.score).toFixed(1)).join(' ');
+    spark=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:36px;margin-top:6px"><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  const delta=pts.length>=2?Math.round((pts[pts.length-1].score-pts[0].score)*100)/100:null;
+  el.innerHTML=`
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;font-weight:700">Strength Score</div>
+      ${delta!==null?`<div style="font-size:10.5px;font-weight:700;color:${delta>=0?'var(--green)':'var(--orange)'}">${delta>=0?'▲':'▼'} ${Math.abs(delta)} / 8wk</div>`:''}
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1;color:var(--accent);margin-top:4px">${current.score}<span style="font-size:12px;color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;font-weight:500">&times; bodyweight</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+      ${Object.entries(current.lifts).map(([pattern,r])=>`<span style="font-size:9.5px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:3px 8px">${LIFT_LABEL[pattern]} ${r.e1rm}kg</span>`).join('')}
+      ${current.liftsFound<4?`<span style="font-size:9.5px;color:var(--text3);padding:3px 2px">+${4-current.liftsFound} not tracked yet</span>`:''}
+    </div>
+    ${spark}`;
+}
+
 function swk(){
   const name=document.getElementById('wn').value.trim();const date=document.getElementById('wd').value||td();
   if(!name){toast('Enter a workout name');return;}
@@ -3391,6 +3485,7 @@ function rh(){
   renderHomeCards();
   renderRecoveryScore();
   renderMuscleRecovery();
+  renderStrengthScore();
   renderNudges();
   renderMobilityHome();
   renderHomeInsight();
