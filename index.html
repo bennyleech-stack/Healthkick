@@ -9,22 +9,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Health Kick</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hk-design.css">
 <style>
 /* ── DESIGN TOKENS ─────────────────────────────────────────────── */
+/* bg/card/border/text/accent/r/rs/rm now come from hk-design.css.
+   Kept here: the wider chart/data-viz palette (macro bars, muscle
+   group colours) that's a distinct concern from the app's single
+   accent/theme and needs more than 3 hues. */
 :root{
-  /* Backgrounds */
-  --bg:#08090c;
-  --bg2:#0e1017;
-  --bg3:#141720;
-  --card:#10121a;
-  --card2:#151820;
-  --border:#1e2230;
-  --border2:#272b3a;
-
-  /* Accent — electric lime */
-  --accent:#c8f135;
-  --accent-d:rgba(200,241,53,.1);
-  --accent-dim:rgba(200,241,53,.6);
+  --accent-dim:rgba(61,220,132,.6);
 
   /* Semantic colours */
   --green:#3dd68c;   --green-d:rgba(61,214,140,.1);
@@ -33,16 +26,6 @@
   --yellow:#ffc247;  --yellow-d:rgba(255,194,71,.1);
   --purple:#a78bfa;  --purple-d:rgba(167,139,250,.1);
   --red:#ff5252;     --red-d:rgba(255,82,82,.1);
-
-  /* Typography */
-  --text:#eef0f6;
-  --text2:#7a8099;
-  --text3:#3d4258;
-
-  /* Shape */
-  --r:16px;
-  --rs:10px;
-  --rm:20px;
 }
 
 /* ── RESET & BASE ──────────────────────────────────────────────── */
@@ -64,39 +47,13 @@ html,body{
   max-width:430px;margin:0 auto;width:100%;
 }
 
-#con{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+#con{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 #con::-webkit-scrollbar{display:none}
 
 /* ── NAVIGATION ────────────────────────────────────────────────── */
-#nav{
-  width:100%;flex-shrink:0;
-  background:rgba(8,9,12,.96);
-  backdrop-filter:blur(24px);
-  border-top:1px solid var(--border);
-  display:flex;
-  z-index:100;
-  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
-  gap:4px;
-}
-.nb{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:4px;padding:8px 4px;
-  background:none;border:none;
-  color:var(--text3);
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:9px;font-weight:600;
-  cursor:pointer;
-  letter-spacing:.4px;text-transform:uppercase;
-  transition:all .2s;
-  border-radius:12px;
-  position:relative;
-}
-.nb svg{width:20px;height:20px;transition:all .2s;}
-.nb.on{
-  color:var(--accent);
-  background:var(--accent-d);
-}
-.nb.on svg{color:var(--accent);}
+/* The bottom nav itself is injected by hk-nav.js (shared across the
+   suite: Home/Train/Food/More). Reports/Body/Goals move under More,
+   reached via index.html#reports etc. — see the hash router below. */
 .nb:active{transform:scale(.92);}
 
 /* ── PAGE HEADER ───────────────────────────────────────────────── */
@@ -669,7 +626,6 @@ canvas{width:100%!important;}
 .nudge-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:2px;}
 .nudge-sub{font-size:10px;line-height:1.4;}
 .nudge-action{font-size:10px;font-weight:700;flex-shrink:0;white-space:nowrap;}
-.nb.on::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 2px 2px;}
 </style>
 
 <link rel="manifest" href="manifest.json">
@@ -1077,25 +1033,7 @@ canvas{width:100%!important;}
 </div>
 
 
-<!-- NAV -->
-<nav id="nav">
-  <button class="nb on" id="nb-home" onclick="sp('home')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L5 10M21 12L19 10M5 10V20a1 1 0 001 1h3v-5a1 1 0 011-1h4a1 1 0 011 1v5h3a1 1 0 001-1V10M5 10L12 4l7 6"/></svg>
-    Home
-  </button>
-  <button class="nb" id="nb-reports" onclick="sp('reports')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 16l3-5 3 2 3-5"/><circle cx="16" cy="8" r="1.5" fill="currentColor" stroke="none"/></svg>
-    Reports
-  </button>
-  <button class="nb" id="nb-body" onclick="sp('body')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="5" r="2.5"/><path d="M8 10h8M12 10v10M9 14h6"/></svg>
-    Body
-  </button>
-  <button class="nb" id="nb-goals" onclick="sp('goals')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M12 3V1M12 23v-2M21 12h2M1 12h2"/></svg>
-    Goals
-  </button>
-</nav>
+<!-- NAV: injected by hk-nav.js at the end of body -->
 
 
 
@@ -5410,6 +5348,16 @@ function renderHomeCards(){
   rh();
   rwt();
 })();
+
+// Hash router: lets hk-nav.js's "More" sheet deep-link into Reports/Body/Goals
+// (index.html#reports etc.) without those needing their own bottom-nav tab.
+function routeFromHash(){
+  const n=(location.hash||'').replace('#','');
+  if(n==='reports'||n==='body'||n==='goals')sp(n);
+}
+window.addEventListener('hashchange',routeFromHash);
+routeFromHash();
 </script>
+<script src="hk-nav.js"></script>
 </body>
 </html>

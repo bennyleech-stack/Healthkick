@@ -63,6 +63,8 @@
   var overlay = document.getElementById('hk-more-overlay');
   if(moreBtn && overlay){
     moreBtn.addEventListener('click', function(){ overlay.classList.add('hk-show'); });
-    overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('hk-show'); });
+    overlay.addEventListener('click', function(e){
+      if(e.target === overlay || e.target.closest('a')) overlay.classList.remove('hk-show');
+    });
   }
 })();
