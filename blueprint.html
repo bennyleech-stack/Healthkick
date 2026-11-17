@@ -346,10 +346,14 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
       <div class="sh-stat"><div class="sh-val" id="sum-vol" style="color:var(--blue)">0</div><div class="sh-lbl">Volume kg</div></div>
       <div class="sh-stat"><div class="sh-val" id="sum-dur" style="color:var(--gold)">0</div><div class="sh-lbl">Minutes</div></div>
     </div>
+    <div id="sum-recap" style="margin-bottom:12px"></div>
     <div id="sum-coverage" style="margin-bottom:12px"></div>
     <div id="prog-note" class="prog-note" style="display:none"></div>
     <div id="sum-progressions" style="margin-bottom:12px"></div>
-    <button onclick="closeSummary()" style="width:100%;padding:14px;border-radius:var(--rs);background:linear-gradient(135deg,var(--gold),var(--accent));color:#0a0f07;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Done</button>
+    <div style="display:flex;gap:8px">
+      <button onclick="shareSessionImage()" style="flex:1;padding:14px;border-radius:var(--rs);background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Share ⤴</button>
+      <button onclick="closeSummary()" style="flex:1;padding:14px;border-radius:var(--rs);background:linear-gradient(135deg,var(--gold),var(--accent));color:#0a0f07;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Done</button>
+    </div>
   </div>
 </div>
 
@@ -1763,6 +1767,123 @@ function cancelLog(){
   document.getElementById('app').style.display = 'flex';
 }
 
+// ════════════════════════════════════════════════════════════════
+// POST-WORKOUT RECAP — plain rules-based text (no AI), computed live
+// from existing s.workouts/bodyweight, same as the dashboard's
+// Strength Score. Nothing new is persisted; everything here is
+// reconstructed each time from data already saved by saveSession().
+// ════════════════════════════════════════════════════════════════
+let _lastSessionRecap = null;
+const STRENGTH_SLOTS_BP = {squat:'squat_pattern', hinge:'hinge_pattern', press:'flat_press', pull:'row_heavy'};
+function get1RMbp(weight,reps){ if(reps===1)return weight; return Math.round(weight*(1+reps/30)); }
+
+function getAllTimeBestsBp(workouts){
+  const bests={};
+  workouts.forEach(w=>{
+    (w.exercises||[]).forEach(ex=>{
+      (ex.sets||[]).forEach(st=>{
+        if(!st.weight||!st.reps)return;
+        const e1=get1RMbp(st.weight,st.reps);
+        if(!bests[ex.name]||e1>bests[ex.name])bests[ex.name]=e1;
+      });
+    });
+  });
+  return bests;
+}
+function getPriorSessionVolume(workouts, sessionName){
+  const prior=[...workouts].filter(w=>w.bpSession===sessionName).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(!prior)return null;
+  return (prior.exercises||[]).reduce((a,e)=>a+(e.sets||[]).reduce((b,st)=>b+(st.weight||0)*(st.reps||0),0),0);
+}
+function bpStrengthScore(s){
+  const sorted=[...(s.bodyweight||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  const bw=sorted.length?sorted[0].weight:null;
+  if(!bw)return null;
+  let total=0, found=0;
+  Object.values(STRENGTH_SLOTS_BP).forEach(slot=>{
+    const matches=s.workouts.filter(w=>(w.exercises||[]).some(ex=>ex.slot===slot));
+    if(!matches.length)return;
+    matches.sort((a,b)=>b.date.localeCompare(a.date));
+    const ex=matches[0].exercises.find(e=>e.slot===slot);
+    let best=0;
+    (ex.sets||[]).forEach(st=>{if(st.weight&&st.reps)best=Math.max(best,get1RMbp(st.weight,st.reps));});
+    if(best>0){total+=best;found++;}
+  });
+  return found?Math.round((total/bw)*100)/100:null;
+}
+function buildRecapLines(sessionName, prs, volumeDelta, scoreDelta){
+  const lines=[];
+  if(prs.length) lines.push('🏆 PR'+(prs.length>1?'s':'')+': '+prs.map(p=>p.name).join(', '));
+  if(volumeDelta) lines.push('Volume '+(volumeDelta.pct>=0?'up':'down')+' '+Math.abs(volumeDelta.pct)+'% vs last '+sessionName);
+  if(scoreDelta!==null && scoreDelta!==0) lines.push('Strength Score '+(scoreDelta>0?'+':'')+scoreDelta+' this session');
+  if(!lines.length) lines.push('Logged and in the books.');
+  return lines;
+}
+function wrapCanvasText(ctx,text,x,y,maxWidth,lineHeight){
+  const words=text.split(' ');
+  let line='';
+  words.forEach(w=>{
+    const test=line?line+' '+w:w;
+    if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,y); line=w; y+=lineHeight; }
+    else line=test;
+  });
+  if(line){ ctx.fillText(line,x,y); y+=lineHeight; }
+  return y;
+}
+function shareSessionImage(){
+  const r=_lastSessionRecap;
+  if(!r)return;
+  const W=640,H=760;
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0B0C0F'; ctx.fillRect(0,0,W,H);
+  const grad=ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'#C8A84B'); grad.addColorStop(1,'#3DDC84');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,6);
+
+  ctx.fillStyle='#5B616C'; ctx.font='700 15px -apple-system,sans-serif';
+  ctx.fillText('HEALTH KICK · BLUEPRINT', 40, 56);
+  ctx.fillStyle='#F2F3F5'; ctx.font='800 38px -apple-system,sans-serif';
+  ctx.fillText(r.sessionName, 40, 104);
+  ctx.fillStyle='#9CA3AF'; ctx.font='500 17px -apple-system,sans-serif';
+  ctx.fillText(new Date(r.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}), 40, 132);
+
+  const stats=[['SETS',String(r.totalSets)],['VOLUME KG',Math.round(r.totalVol).toLocaleString()],['MINUTES',String(r.dur)]];
+  let sx=40;
+  stats.forEach(([label,val])=>{
+    ctx.fillStyle='#3DDC84'; ctx.font='800 30px -apple-system,sans-serif'; ctx.fillText(val, sx, 198);
+    ctx.fillStyle='#5B616C'; ctx.font='700 11px -apple-system,sans-serif'; ctx.fillText(label, sx, 218);
+    sx += 190;
+  });
+
+  ctx.fillStyle='#2A2E37'; ctx.fillRect(40,250,W-80,1);
+
+  let y=300;
+  ctx.font='600 19px -apple-system,sans-serif';
+  buildRecapLines(r.sessionName, r.prs, r.volumeDelta, r.scoreDelta).forEach(line=>{
+    ctx.fillStyle='#F2F3F5';
+    y=wrapCanvasText(ctx,'• '+line,40,y,W-80,27)+16;
+  });
+
+  ctx.fillStyle='#5B616C'; ctx.font='500 13px -apple-system,sans-serif';
+  ctx.fillText('healthkick', 40, H-28);
+
+  canvas.toBlob(blob=>{
+    if(!blob)return;
+    const file=new File([blob], 'session-'+r.date+'.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:r.sessionName+' — Health Kick'}).catch(()=>{});
+    } else {
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download='session-'+r.date+'.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    }
+  }, 'image/png');
+}
+
 function saveSession(){
   if(!_activeSession) return;
   const weekNum = _activeWeek;
@@ -1802,6 +1923,15 @@ function saveSession(){
   // Save to ft6 as a workout (visible in Health Kick)
   const s = load();
   if(!s.workouts) s.workouts = [];
+
+  // Snapshot "before" state for the post-workout recap, using data as it
+  // stood prior to this session — PRs, last time's volume on this same
+  // session, and the Strength Score, all computed live (no persisted
+  // history of their own, same approach as the dashboard's Strength Score).
+  const priorBests = getAllTimeBestsBp(s.workouts);
+  const priorVol = getPriorSessionVolume(s.workouts, sessionName);
+  const scoreBefore = bpStrengthScore(s);
+
   s.workouts.unshift({
     id:Date.now(),
     name: sessionName || 'Blueprint Session',
@@ -1818,6 +1948,15 @@ function saveSession(){
   advanceRotation();
   bumpReturnMode();
 
+  const scoreAfter = bpStrengthScore(s);
+  const prs = exercises.map(ex=>{
+    let best=0;
+    ex.sets.forEach(st=>{if(st.weight&&st.reps)best=Math.max(best,get1RMbp(st.weight,st.reps));});
+    return{name:ex.name, e1rm:best, priorE1rm:priorBests[ex.name]||null};
+  }).filter(p=>p.e1rm>0 && p.priorE1rm!==null && p.e1rm>p.priorE1rm);
+  const volumeDelta = (priorVol && priorVol>0) ? {pct:Math.round((totalVol-priorVol)/priorVol*100), from:priorVol} : null;
+  const scoreDelta = (scoreBefore!==null && scoreAfter!==null) ? Math.round((scoreAfter-scoreBefore)*100)/100 : null;
+
   const dur = Math.round((Date.now()-_sessionStart)/60000);
 
   // Show summary
@@ -1826,6 +1965,13 @@ function saveSession(){
   document.getElementById('sum-sets').textContent = totalSets;
   document.getElementById('sum-vol').textContent = Math.round(totalVol).toLocaleString();
   document.getElementById('sum-dur').textContent = dur;
+
+  _lastSessionRecap = {sessionName: sessionName||'Session', date:td(), totalSets, totalVol, dur, prs, volumeDelta, scoreDelta};
+  const recapLines = buildRecapLines(sessionName||'Session', prs, volumeDelta, scoreDelta);
+  const recapEl = document.getElementById('sum-recap');
+  if(recapEl) recapEl.innerHTML = recapLines.map(l=>
+    `<div style="font-size:13px;color:var(--text2);line-height:1.6;padding:3px 0">${l}</div>`
+  ).join('');
 
   const covEl = document.getElementById('sum-coverage');
   if(covEl) covEl.innerHTML = coverageHtml(coverageFor(sessionName, !!_activeSession.isShort, exercises), !!_activeSession.isShort);
