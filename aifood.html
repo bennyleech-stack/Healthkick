@@ -89,7 +89,7 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 .msel.active .msel-count{color:var(--accent)}
 
 /* ── SCROLL ──────────────────────────────────────────────────── */
-#scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 230px}
+#scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 calc(290px + env(safe-area-inset-bottom,0px))}
 #scroll::-webkit-scrollbar{display:none}
 
 /* ── SECTION HEADERS ─────────────────────────────────────────── */
@@ -159,12 +159,18 @@ html,body{position:fixed;inset:0;background:var(--bg);color:var(--text);font-fam
 
 /* ── BOTTOM INPUT BAR ────────────────────────────────────────── */
 .bottom{
-  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  /* #app is position:fixed, which always opens its own stacking context —
+     so this element's z-index only ever competes with its #app siblings,
+     never with hk-nav (a later sibling of #app itself, appended to body).
+     Sitting it just above hk-nav instead of at the true bottom edge avoids
+     relying on z-index to win a fight it structurally can't win, and keeps
+     the global nav reachable instead of being covered by this bar. */
+  position:fixed;bottom:calc(60px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
   width:100%;max-width:430px;
   background:rgba(8,13,24,.97);
   border-top:1px solid var(--border);
   backdrop-filter:blur(24px);
-  padding:10px 14px calc(12px + env(safe-area-inset-bottom));z-index:100;
+  padding:10px 14px 12px;z-index:100;
 }
 .input-row{display:flex;gap:8px;align-items:center}
 .food-input{

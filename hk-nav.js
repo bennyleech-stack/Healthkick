@@ -57,7 +57,18 @@
     '</div>' +
   '</div>';
 
-  document.body.insertAdjacentHTML('beforeend', navHtml + sheetHtml);
+  // Mount inside #app (if present) rather than body. #app is position:fixed
+  // in every app here, and position:fixed ALWAYS opens its own stacking
+  // context — so a nav appended to body sits in a sibling context from
+  // everything inside #app, and z-index comparisons across that boundary
+  // don't work the way they look like they should (an #app descendant with
+  // z-index:9999 still can't out-rank this nav if #app itself has no
+  // z-index, because the comparison that matters is #app-the-box vs
+  // nav-the-box, not descendant vs nav). Mounting inside #app puts the nav
+  // in the same stacking context as the rest of the page, so ordinary
+  // z-index comparisons against it work as expected.
+  var mountTarget = document.getElementById('app') || document.body;
+  mountTarget.insertAdjacentHTML('beforeend', navHtml + sheetHtml);
 
   var moreBtn = document.getElementById('hk-nav-more-btn');
   var overlay = document.getElementById('hk-more-overlay');
